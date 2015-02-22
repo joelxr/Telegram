@@ -35,10 +35,10 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.telegram.messenger.FileLog;
-import org.telegram.messenger.R;
-import org.telegram.messenger.TLRPC;
+import org.telegram.R;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.TLRPC;
 import org.telegram.ui.Components.NumberPicker;
 import org.telegram.ui.Components.TypefaceSpan;
 
@@ -51,14 +51,13 @@ import java.util.Hashtable;
 public class AndroidUtilities {
 
     private static final Hashtable<String, Typeface> typefaceCache = new Hashtable<String, Typeface>();
-    private static int prevOrientation = -10;
-    private static boolean waitingForSms = false;
     private static final Object smsLock = new Object();
-
     public static int statusBarHeight = 0;
     public static float density = 1;
     public static Point displaySize = new Point();
     public static Integer photoSize = null;
+    private static int prevOrientation = -10;
+    private static boolean waitingForSms = false;
     private static Boolean isTablet = null;
 
     static {
@@ -72,7 +71,7 @@ public class AndroidUtilities {
         }
         try {
             prevOrientation = activity.getRequestedOrientation();
-            WindowManager manager = (WindowManager)activity.getSystemService(Activity.WINDOW_SERVICE);
+            WindowManager manager = (WindowManager) activity.getSystemService(Activity.WINDOW_SERVICE);
             if (manager != null && manager.getDefaultDisplay() != null) {
                 int rotation = manager.getDefaultDisplay().getRotation();
                 int orientation = activity.getResources().getConfiguration().orientation;
@@ -161,7 +160,7 @@ public class AndroidUtilities {
         if (view == null) {
             return;
         }
-        InputMethodManager inputManager = (InputMethodManager)view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        InputMethodManager inputManager = (InputMethodManager) view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
         inputManager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
 
         ((InputMethodManager) view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE)).showSoftInput(view, 0);
@@ -209,7 +208,7 @@ public class AndroidUtilities {
     }
 
     public static int dp(float value) {
-        return (int)Math.ceil(density * value);
+        return (int) Math.ceil(density * value);
     }
 
     public static float dpf2(float value) {
@@ -218,11 +217,11 @@ public class AndroidUtilities {
 
     public static void checkDisplaySize() {
         try {
-            WindowManager manager = (WindowManager)ApplicationLoader.applicationContext.getSystemService(Context.WINDOW_SERVICE);
+            WindowManager manager = (WindowManager) ApplicationLoader.applicationContext.getSystemService(Context.WINDOW_SERVICE);
             if (manager != null) {
                 Display display = manager.getDefaultDisplay();
                 if (display != null) {
-                    if(android.os.Build.VERSION.SDK_INT < 13) {
+                    if (android.os.Build.VERSION.SDK_INT < 13) {
                         displaySize.set(display.getWidth(), display.getHeight());
                     } else {
                         display.getSize(displaySize);
@@ -236,7 +235,7 @@ public class AndroidUtilities {
     }
 
     public static long makeBroadcastId(int id) {
-        return 0x0000000100000000L | ((long)id & 0x00000000FFFFFFFFL);
+        return 0x0000000100000000L | ((long) id & 0x00000000FFFFFFFFL);
     }
 
     public static int getMyLayerVersion(int layer) {
@@ -426,7 +425,7 @@ public class AndroidUtilities {
             if (mAttachInfo != null) {
                 Field mStableInsetsField = mAttachInfo.getClass().getDeclaredField("mStableInsets");
                 mStableInsetsField.setAccessible(true);
-                Rect insets = (Rect)mStableInsetsField.get(mAttachInfo);
+                Rect insets = (Rect) mStableInsetsField.get(mAttachInfo);
                 return insets.bottom;
             }
         } catch (Exception e) {

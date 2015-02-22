@@ -17,12 +17,12 @@ import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.R;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
-import org.telegram.messenger.ApplicationLoader;
 
 import java.util.Locale;
 
@@ -37,7 +37,6 @@ public class AvatarDrawable extends Drawable {
     private static int[] arrColorsNames = {0xffca5650, 0xffd87b29, 0xffc7a21c, 0xff50b232, 0xff42b1a8, 0xff4e92cc, 0xff4e92cc, 0xffdb5b9d};
     private static int[] arrColorsButtons = {R.drawable.bar_selector_red, R.drawable.bar_selector_orange, R.drawable.bar_selector_yellow,
             R.drawable.bar_selector_green, R.drawable.bar_selector_cyan, R.drawable.bar_selector_blue, R.drawable.bar_selector_violet, R.drawable.bar_selector_pink};
-
 
 
     private static Drawable broadcastDrawable;

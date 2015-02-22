@@ -1,20 +1,19 @@
-<FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_height="102dp"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/parent"
     android:layout_width="100dp"
-    android:id="@+id/parent">
+    android:layout_height="102dp">
 
     <ImageView
-        android:layout_height="100dp"
-        android:layout_width="100dp"
-        android:scaleType="center"
         android:id="@+id/image"
-        android:layout_gravity="bottom"/>
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_gravity="bottom"
+        android:scaleType="center" />
 
     <FrameLayout
-        android:layout_height="102dp"
+        android:id="@+id/selection"
         android:layout_width="100dp"
-        android:background="@drawable/wall_selection"
-        android:id="@+id/selection"/>
+        android:layout_height="102dp"
+        android:background="@drawable/wall_selection" />
 
 </FrameLayout>

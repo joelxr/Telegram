@@ -11,6 +11,7 @@ package org.telegram.messenger;
 import java.util.HashMap;
 
 public class TLClassStore {
+    static TLClassStore store = null;
     private HashMap<Integer, Class> classStore;
 
     public TLClassStore () {
@@ -400,8 +401,6 @@ public class TLClassStore {
         classStore.put(TLRPC.TL_messageEncryptedAction.constructor, TLRPC.TL_messageEncryptedAction.class);
         classStore.put(TLRPC.TL_decryptedMessageHolder.constructor, TLRPC.TL_decryptedMessageHolder.class);
     }
-
-    static TLClassStore store = null;
 
     public static TLClassStore Instance() {
         if (store == null) {

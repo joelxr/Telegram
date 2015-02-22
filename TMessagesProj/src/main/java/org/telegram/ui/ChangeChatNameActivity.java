@@ -24,24 +24,23 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
+import org.telegram.android.MessagesController;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.TLRPC;
-import org.telegram.android.MessagesController;
-import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.BaseFragment;
 
 public class ChangeChatNameActivity extends BaseFragment {
 
+    private final static int done_button = 1;
     private EditText firstNameField;
     private View headerLabelView;
     private int chat_id;
     private View doneButton;
-
-    private final static int done_button = 1;
 
     public ChangeChatNameActivity(Bundle args) {
         super(args);
@@ -114,7 +113,7 @@ public class ChangeChatNameActivity extends BaseFragment {
             });
 
             ((LinearLayout) fragmentView).addView(firstNameField);
-            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams)firstNameField.getLayoutParams();
+            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) firstNameField.getLayoutParams();
             layoutParams.topMargin = AndroidUtilities.dp(24);
             layoutParams.height = AndroidUtilities.dp(36);
             layoutParams.leftMargin = AndroidUtilities.dp(24);
@@ -129,7 +128,7 @@ public class ChangeChatNameActivity extends BaseFragment {
             }
             firstNameField.setSelection(firstNameField.length());
         } else {
-            ViewGroup parent = (ViewGroup)fragmentView.getParent();
+            ViewGroup parent = (ViewGroup) fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }

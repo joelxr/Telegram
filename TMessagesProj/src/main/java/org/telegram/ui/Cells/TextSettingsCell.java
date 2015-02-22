@@ -23,10 +23,10 @@ import org.telegram.android.LocaleController;
 
 public class TextSettingsCell extends FrameLayout {
 
+    private static Paint paint;
     private TextView textView;
     private TextView valueTextView;
     private ImageView valueImageView;
-    private static Paint paint;
     private boolean needDivider;
 
     public TextSettingsCell(Context context) {

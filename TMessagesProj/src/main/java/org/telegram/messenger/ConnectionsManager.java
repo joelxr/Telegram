@@ -31,31 +31,31 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.TcpConnectionDelegate {
+    public static final int DEFAULT_DATACENTER_ID = Integer.MAX_VALUE;
+    private static final int DC_UPDATE_TIME = 60 * 60;
+    private static volatile ConnectionsManager Instance = null;
+    private final HashMap<Integer, ArrayList<NetworkMessage>> genericMessagesToDatacenters = new HashMap<Integer, ArrayList<NetworkMessage>>();
+    protected int currentDatacenterId;
+    protected int movingToDatacenterId;
+    //================================================================================
+    // Requests manage
+    //================================================================================
+    int lastClassGuid = 1;
     private HashMap<Integer, Datacenter> datacenters = new HashMap<Integer, Datacenter>();
-
     private ArrayList<Long> sessionsToDestroy = new ArrayList<Long>();
     private ArrayList<Long> destroyingSessions = new ArrayList<Long>();
     private HashMap<Integer, ArrayList<Long>> quickAckIdToRequestIds = new HashMap<Integer, ArrayList<Long>>();
-
     private HashMap<Long, Integer> pingIdToDate = new HashMap<Long, Integer>();
     private ConcurrentHashMap<Integer, ArrayList<Long>> requestsByGuids = new ConcurrentHashMap<Integer, ArrayList<Long>>(100, 1.0f, 2);
     private ConcurrentHashMap<Long, Integer> requestsByClass = new ConcurrentHashMap<Long, Integer>(100, 1.0f, 2);
     private volatile int connectionState = 2;
-
     private ArrayList<RPCRequest> requestQueue = new ArrayList<RPCRequest>();
     private ArrayList<RPCRequest> runningRequests = new ArrayList<RPCRequest>();
     private ArrayList<Action> actionQueue = new ArrayList<Action>();
-
     private ArrayList<Integer> unknownDatacenterIds = new ArrayList<Integer>();
     private ArrayList<Integer> neededDatacenterIds = new ArrayList<Integer>();
     private ArrayList<Integer> unauthorizedDatacenterIds = new ArrayList<Integer>();
-    private final HashMap<Integer, ArrayList<NetworkMessage>> genericMessagesToDatacenters = new HashMap<Integer, ArrayList<NetworkMessage>>();
-
     private TLRPC.TL_auth_exportedAuthorization movingAuthorization;
-    public static final int DEFAULT_DATACENTER_ID = Integer.MAX_VALUE;
-    private static final int DC_UPDATE_TIME = 60 * 60;
-    protected int currentDatacenterId;
-    protected int movingToDatacenterId;
     private long lastOutgoingMessageId = 0;
     private int isTestBackend = 0;
     private int timeDifference = 0;
@@ -67,7 +67,6 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
     private int currentAppVersion = 0;
     private long pushSessionId;
     private boolean registeringForPush = false;
-
     private boolean paused = false;
     private long lastPingTime = System.currentTimeMillis();
     private long lastPushPingTime = 0;
@@ -75,27 +74,22 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
     private boolean sendingPushPing = false;
     private int nextSleepTimeout = 30000;
     private long nextPingId = 0;
-
     private long lastPauseTime = System.currentTimeMillis();
     private boolean appPaused = true;
-
     private volatile long nextCallToken = 1;
 
-    private static volatile ConnectionsManager Instance = null;
-    public static ConnectionsManager getInstance() {
-        ConnectionsManager localInstance = Instance;
-        if (localInstance == null) {
-            synchronized (ConnectionsManager.class) {
-                localInstance = Instance;
-                if (localInstance == null) {
-                    Instance = localInstance = new ConnectionsManager();
-                }
-            }
-        }
-        return localInstance;
-    }
+    public ConnectionsManager() {
+        currentAppVersion = ApplicationLoader.getAppVersion();
+        lastOutgoingMessageId = 0;
+        movingToDatacenterId = DEFAULT_DATACENTER_ID;
+        loadSession();
 
-    private Runnable stageRunnable = new Runnable() {
+        if (!isNetworkOnline()) {
+            connectionState = 1;
+        }
+
+        Utilities.stageQueue.postRunnable(stageRunnable, 1000);
+    }    private Runnable stageRunnable = new Runnable() {
         @Override
         public void run() {
             Utilities.stageQueue.handler.removeCallbacks(stageRunnable);
@@ -202,17 +196,68 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
         }
     };
 
-    public ConnectionsManager() {
-        currentAppVersion = ApplicationLoader.getAppVersion();
-        lastOutgoingMessageId = 0;
-        movingToDatacenterId = DEFAULT_DATACENTER_ID;
-        loadSession();
-
-        if (!isNetworkOnline()) {
-            connectionState = 1;
+    public static ConnectionsManager getInstance() {
+        ConnectionsManager localInstance = Instance;
+        if (localInstance == null) {
+            synchronized (ConnectionsManager.class) {
+                localInstance = Instance;
+                if (localInstance == null) {
+                    Instance = localInstance = new ConnectionsManager();
+                }
+            }
         }
+        return localInstance;
+    }
 
-        Utilities.stageQueue.postRunnable(stageRunnable, 1000);
+    public static boolean isNetworkOnline() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager)ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo netInfo = cm.getActiveNetworkInfo();
+            if (netInfo != null && (netInfo.isConnectedOrConnecting() || netInfo.isAvailable())) {
+                return true;
+            }
+
+            netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+
+            if (netInfo != null && netInfo.isConnectedOrConnecting()) {
+                return true;
+            } else {
+                netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+                if(netInfo != null && netInfo.isConnectedOrConnecting()) {
+                    return true;
+                }
+            }
+        } catch(Exception e) {
+            FileLog.e("tmessages", e);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isRoaming() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager)ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo netInfo = cm.getActiveNetworkInfo();
+            if (netInfo != null) {
+                return netInfo.isRoaming();
+            }
+        } catch(Exception e) {
+            FileLog.e("tmessages", e);
+        }
+        return false;
+    }
+
+    public static boolean isConnectedToWiFi() {
+        try {
+            ConnectivityManager cm = (ConnectivityManager)ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+            if (netInfo != null && netInfo.getState() == NetworkInfo.State.CONNECTED) {
+                return true;
+            }
+        } catch(Exception e) {
+            FileLog.e("tmessages", e);
+        }
+        return false;
     }
 
     public int getConnectionState() {
@@ -242,6 +287,10 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
             }
         });
     }
+
+    //================================================================================
+    // Config and session manage
+    //================================================================================
 
     public void applicationMovedToForeground() {
         Utilities.stageQueue.postRunnable(stageRunnable);
@@ -291,23 +340,11 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
         return lastPauseTime;
     }
 
-    //================================================================================
-    // Config and session manage
-    //================================================================================
-
     public Datacenter datacenterWithId(int datacenterId) {
         if (datacenterId == DEFAULT_DATACENTER_ID) {
             return datacenters.get(currentDatacenterId);
         }
         return datacenters.get(datacenterId);
-    }
-
-    void setTimeDifference(int diff) {
-        boolean store = Math.abs(diff - timeDifference) > 25;
-        timeDifference = diff;
-        if (store) {
-            saveSession();
-        }
     }
 
     public void switchBackend() {
@@ -616,10 +653,6 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
         return (long)(messageId / 4294967296.0 * 1000);
     }
 
-    //================================================================================
-    // Requests manage
-    //================================================================================
-    int lastClassGuid = 1;
     public int generateClassGuid() {
         int guid = lastClassGuid++;
         ArrayList<Long> requests = new ArrayList<Long>();
@@ -933,63 +966,20 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
         });
     }
 
-    public static boolean isNetworkOnline() {
-        try {
-            ConnectivityManager cm = (ConnectivityManager)ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo netInfo = cm.getActiveNetworkInfo();
-            if (netInfo != null && (netInfo.isConnectedOrConnecting() || netInfo.isAvailable())) {
-                return true;
-            }
-
-            netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
-
-            if (netInfo != null && netInfo.isConnectedOrConnecting()) {
-                return true;
-            } else {
-                netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-                if(netInfo != null && netInfo.isConnectedOrConnecting()) {
-                    return true;
-                }
-            }
-        } catch(Exception e) {
-            FileLog.e("tmessages", e);
-            return true;
-        }
-        return false;
-    }
-
-    public static boolean isRoaming() {
-        try {
-            ConnectivityManager cm = (ConnectivityManager)ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo netInfo = cm.getActiveNetworkInfo();
-            if (netInfo != null) {
-                return netInfo.isRoaming();
-            }
-        } catch(Exception e) {
-            FileLog.e("tmessages", e);
-        }
-        return false;
-    }
-
-    public static boolean isConnectedToWiFi() {
-        try {
-            ConnectivityManager cm = (ConnectivityManager)ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-            if (netInfo != null && netInfo.getState() == NetworkInfo.State.CONNECTED) {
-                return true;
-            }
-        } catch(Exception e) {
-            FileLog.e("tmessages", e);
-        }
-        return false;
-    }
-
     public int getCurrentTime() {
         return (int)(System.currentTimeMillis() / 1000) + timeDifference;
     }
 
     public int getTimeDifference() {
         return timeDifference;
+    }
+
+    void setTimeDifference(int diff) {
+        boolean store = Math.abs(diff - timeDifference) > 25;
+        timeDifference = diff;
+        if (store) {
+            saveSession();
+        }
     }
 
     private void processRequestQueue(int requestClass, int _datacenterId) {
@@ -2382,10 +2372,6 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
         }
     }
 
-    //================================================================================
-    // TCPConnection delegate
-    //================================================================================
-
     @Override
     public void tcpConnectionClosed(TcpConnection connection) {
         if (connection.getDatacenterId() == currentDatacenterId && (connection.transportRequestClass & RPCRequest.RPCRequestClassGeneric) != 0) {
@@ -2425,6 +2411,10 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
             lastPushPingTime = System.currentTimeMillis() - 60000 * 3 + 4000;
         }
     }
+
+    //================================================================================
+    // TCPConnection delegate
+    //================================================================================
 
     @Override
     public void tcpConnectionConnected(TcpConnection connection) {
@@ -2598,10 +2588,6 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
         return null;
     }
 
-    //================================================================================
-    // Move to datacenter manage
-    //================================================================================
-
     void moveToDatacenter(final int datacenterId) {
         if (movingToDatacenterId == datacenterId) {
             return;
@@ -2637,6 +2623,10 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
             authorizeOnMovingDatacenter();
         }
     }
+
+    //================================================================================
+    // Move to datacenter manage
+    //================================================================================
 
     void authorizeOnMovingDatacenter() {
         Datacenter datacenter = datacenterWithId(movingToDatacenterId);
@@ -2692,16 +2682,16 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
         processRequestQueue(0, 0);
     }
 
-    //================================================================================
-    // Actors manage
-    //================================================================================
-
     public void dequeueActor(final Action actor, final boolean execute) {
         if (actionQueue.size() == 0 || execute) {
             actor.execute(null);
         }
         actionQueue.add(actor);
     }
+
+    //================================================================================
+    // Actors manage
+    //================================================================================
 
     @Override
     public void ActionDidFinishExecution(final Action action, HashMap<String, Object> params) {
@@ -2746,4 +2736,6 @@ public class ConnectionsManager implements Action.ActionDelegate, TcpConnection.
             }
         });
     }
+
+
 }

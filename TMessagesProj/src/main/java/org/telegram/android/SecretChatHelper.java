@@ -14,13 +14,13 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 
+import org.telegram.R;
 import org.telegram.messenger.BuffersStorage;
 import org.telegram.messenger.ByteBufferDesc;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessageKeyData;
-import org.telegram.messenger.R;
 import org.telegram.messenger.RPCRequest;
 import org.telegram.messenger.TLClassStore;
 import org.telegram.messenger.TLObject;
@@ -39,15 +39,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SecretChatHelper {
 
     public static final int CURRENT_SECRET_CHAT_LAYER = 20;
-
+    private static volatile SecretChatHelper Instance = null;
+    public ArrayList<TLRPC.Update> delayedEncryptedChatUpdates = new ArrayList<TLRPC.Update>();
     private ArrayList<Integer> sendingNotifyLayer = new ArrayList<Integer>();
     private HashMap<Integer, ArrayList<TLRPC.TL_decryptedMessageHolder>> secretHolesQueue = new HashMap<Integer, ArrayList<TLRPC.TL_decryptedMessageHolder>>();
     private HashMap<Integer, TLRPC.EncryptedChat> acceptingChats = new HashMap<Integer, TLRPC.EncryptedChat>();
-    public ArrayList<TLRPC.Update> delayedEncryptedChatUpdates = new ArrayList<TLRPC.Update>();
     private ArrayList<Long> pendingEncMessagesToDelete = new ArrayList<Long>();
     private boolean startingSecretChat = false;
 
-    private static volatile SecretChatHelper Instance = null;
     public static SecretChatHelper getInstance() {
         SecretChatHelper localInstance = Instance;
         if (localInstance == null) {
@@ -59,6 +58,14 @@ public class SecretChatHelper {
             }
         }
         return localInstance;
+    }
+
+    public static boolean isSecretVisibleMessage(TLRPC.Message message) {
+        return message.action instanceof TLRPC.TL_messageEncryptedAction && (message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionScreenshotMessages || message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionSetMessageTTL);
+    }
+
+    public static boolean isSecretInvisibleMessage(TLRPC.Message message) {
+        return message.action instanceof TLRPC.TL_messageEncryptedAction && !(message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionScreenshotMessages || message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionSetMessageTTL);
     }
 
     public void cleanUp() {
@@ -636,14 +643,6 @@ public class SecretChatHelper {
                 MessagesStorage.getInstance().putMessages(arr, false, true, false, 0);
             }
         }
-    }
-
-    public static boolean isSecretVisibleMessage(TLRPC.Message message) {
-        return message.action instanceof TLRPC.TL_messageEncryptedAction && (message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionScreenshotMessages || message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionSetMessageTTL);
-    }
-
-    public static boolean isSecretInvisibleMessage(TLRPC.Message message) {
-        return message.action instanceof TLRPC.TL_messageEncryptedAction && !(message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionScreenshotMessages || message.action.encryptedAction instanceof TLRPC.TL_decryptedMessageActionSetMessageTTL);
     }
 
     protected void performSendEncryptedRequest(final TLRPC.DecryptedMessage req, final TLRPC.Message newMsgObj, final TLRPC.EncryptedChat chat, final TLRPC.InputEncryptedFile encryptedFile, final String originalPath) {

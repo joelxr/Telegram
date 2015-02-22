@@ -14,13 +14,12 @@ import android.graphics.Paint;
 import org.telegram.android.AndroidUtilities;
 
 public class ProgressView {
-    private Paint innerPaint;
-    private Paint outerPaint;
-
     public float currentProgress = 0;
     public int width;
     public int height;
     public float progressHeight = AndroidUtilities.dp(2.0f);
+    private Paint innerPaint;
+    private Paint outerPaint;
 
     public ProgressView() {
         innerPaint = new Paint();

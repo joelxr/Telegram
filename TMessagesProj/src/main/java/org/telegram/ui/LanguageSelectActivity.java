@@ -24,32 +24,31 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.messenger.FileLog;
 import org.telegram.android.LocaleController;
-import org.telegram.messenger.R;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.Utilities;
-import org.telegram.ui.Adapters.BaseFragmentAdapter;
-import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.Adapters.BaseFragmentAdapter;
+import org.telegram.ui.Cells.TextSettingsCell;
 
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class LanguageSelectActivity extends BaseFragment {
+    public ArrayList<LocaleController.LocaleInfo> searchResult;
     private BaseFragmentAdapter listAdapter;
     private ListView listView;
     private boolean searchWas;
     private boolean searching;
     private BaseFragmentAdapter searchListViewAdapter;
     private TextView emptyTextView;
-
     private Timer searchTimer;
-    public ArrayList<LocaleController.LocaleInfo> searchResult;
 
     @Override
     public View createView(LayoutInflater inflater, ViewGroup container) {
@@ -230,7 +229,7 @@ public class LanguageSelectActivity extends BaseFragment {
                 }
             });
         } else {
-            ViewGroup parent = (ViewGroup)fragmentView.getParent();
+            ViewGroup parent = (ViewGroup) fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }

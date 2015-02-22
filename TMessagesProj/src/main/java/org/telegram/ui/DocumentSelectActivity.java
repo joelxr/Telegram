@@ -28,19 +28,19 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.messenger.FileLog;
 import org.telegram.android.LocaleController;
-import org.telegram.messenger.R;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.Utilities;
-import org.telegram.ui.Adapters.BaseFragmentAdapter;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
+import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.Adapters.BaseFragmentAdapter;
 import org.telegram.ui.AnimationCompat.AnimatorSetProxy;
 import org.telegram.ui.AnimationCompat.ObjectAnimatorProxy;
 import org.telegram.ui.Cells.TextDetailDocumentsCell;
-import org.telegram.ui.ActionBar.BaseFragment;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -52,43 +52,13 @@ import java.util.HashMap;
 
 public class DocumentSelectActivity extends BaseFragment {
 
-    public static abstract interface DocumentSelectActivityDelegate {
-        public void didSelectFiles(DocumentSelectActivity activity, ArrayList<String> files);
-        public void startDocumentSelectActivity();
-    }
-
+    private final static int done = 3;
     private ListView listView;
     private ListAdapter listAdapter;
     private TextView selectedMessagesCountTextView;
     private TextView emptyView;
 
     private File currentDir;
-    private ArrayList<ListItem> items = new ArrayList<ListItem>();
-    private boolean receiverRegistered = false;
-    private ArrayList<HistoryEntry> history = new ArrayList<HistoryEntry>();
-    private long sizeLimit = 1024 * 1024 * 1024;
-    private DocumentSelectActivityDelegate delegate;
-    private HashMap<String, ListItem> selectedFiles = new HashMap<String, ListItem>();
-    private ArrayList<View> actionModeViews = new ArrayList<View>();
-    private boolean scrolling;
-
-    private final static int done = 3;
-
-    private class ListItem {
-        int icon;
-        String title;
-        String subtitle = "";
-        String ext = "";
-        String thumb;
-        File file;
-    }
-
-    private class HistoryEntry {
-        int scrollItem, scrollOffset;
-        File dir;
-        String title;
-    }
-
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context arg0, Intent intent) {
@@ -112,6 +82,14 @@ public class DocumentSelectActivity extends BaseFragment {
             }
         }
     };
+    private ArrayList<ListItem> items = new ArrayList<ListItem>();
+    private boolean receiverRegistered = false;
+    private ArrayList<HistoryEntry> history = new ArrayList<HistoryEntry>();
+    private long sizeLimit = 1024 * 1024 * 1024;
+    private DocumentSelectActivityDelegate delegate;
+    private HashMap<String, ListItem> selectedFiles = new HashMap<String, ListItem>();
+    private ArrayList<View> actionModeViews = new ArrayList<View>();
+    private boolean scrolling;
 
     @Override
     public void onFragmentDestroy() {
@@ -195,7 +173,7 @@ public class DocumentSelectActivity extends BaseFragment {
                 }
             });
             actionMode.addView(selectedMessagesCountTextView);
-            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams)selectedMessagesCountTextView.getLayoutParams();
+            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) selectedMessagesCountTextView.getLayoutParams();
             layoutParams.weight = 1;
             layoutParams.width = 0;
             layoutParams.height = LinearLayout.LayoutParams.MATCH_PARENT;
@@ -205,14 +183,14 @@ public class DocumentSelectActivity extends BaseFragment {
 
             fragmentView = inflater.inflate(R.layout.document_select_layout, container, false);
             listAdapter = new ListAdapter(getParentActivity());
-            emptyView = (TextView)fragmentView.findViewById(R.id.searchEmptyView);
+            emptyView = (TextView) fragmentView.findViewById(R.id.searchEmptyView);
             emptyView.setOnTouchListener(new View.OnTouchListener() {
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
                     return true;
                 }
             });
-            listView = (ListView)fragmentView.findViewById(R.id.listView);
+            listView = (ListView) fragmentView.findViewById(R.id.listView);
             listView.setEmptyView(emptyView);
             listView.setAdapter(listAdapter);
 
@@ -349,7 +327,7 @@ public class DocumentSelectActivity extends BaseFragment {
 
             listRoots();
         } else {
-            ViewGroup parent = (ViewGroup)fragmentView.getParent();
+            ViewGroup parent = (ViewGroup) fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -413,7 +391,7 @@ public class DocumentSelectActivity extends BaseFragment {
         File[] files = null;
         try {
             files = dir.listFiles();
-        } catch(Exception e) {
+        } catch (Exception e) {
             showErrorBox(e.getLocalizedMessage());
             return false;
         }
@@ -512,7 +490,7 @@ public class DocumentSelectActivity extends BaseFragment {
                 }
                 aliases.get(info[0]).add(info[1]);
                 if (info[1].equals(extStorage)) {
-                    extDevice=info[0];
+                    extDevice = info[0];
                 }
                 result.add(info[1]);
             }
@@ -567,12 +545,33 @@ public class DocumentSelectActivity extends BaseFragment {
 
     private String getRootSubtitle(String path) {
         StatFs stat = new StatFs(path);
-        long total = (long)stat.getBlockCount() * (long)stat.getBlockSize();
-        long free = (long)stat.getAvailableBlocks() * (long)stat.getBlockSize();
+        long total = (long) stat.getBlockCount() * (long) stat.getBlockSize();
+        long free = (long) stat.getAvailableBlocks() * (long) stat.getBlockSize();
         if (total == 0) {
             return "";
         }
         return LocaleController.formatString("FreeOfTotal", R.string.FreeOfTotal, Utilities.formatFileSize(free), Utilities.formatFileSize(total));
+    }
+
+    public static abstract interface DocumentSelectActivityDelegate {
+        public void didSelectFiles(DocumentSelectActivity activity, ArrayList<String> files);
+
+        public void startDocumentSelectActivity();
+    }
+
+    private class ListItem {
+        int icon;
+        String title;
+        String subtitle = "";
+        String ext = "";
+        String thumb;
+        File file;
+    }
+
+    private class HistoryEntry {
+        int scrollItem, scrollOffset;
+        File dir;
+        String title;
     }
 
     private class ListAdapter extends BaseFragmentAdapter {

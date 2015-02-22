@@ -29,19 +29,13 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
-import org.telegram.messenger.R;
 
 import java.lang.reflect.Field;
 
 public class ActionBarMenuItem extends ImageView {
-
-    public static interface ActionBarMenuItemSearchListener {
-        public abstract void onSearchExpand();
-        public abstract void onSearchCollapse();
-        public abstract void onTextChanged(EditText editText);
-    }
 
     private ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout;
     private ActionBarMenu parentMenu;
@@ -56,7 +50,6 @@ public class ActionBarMenuItem extends ImageView {
     private boolean showFromBottom;
     private int menuHeight = AndroidUtilities.dp(16);
     private boolean needOffset = Build.VERSION.SDK_INT >= 21;
-
     public ActionBarMenuItem(Context context, ActionBarMenu menu, int background) {
         super(context);
         setBackgroundResource(background);
@@ -98,8 +91,8 @@ public class ActionBarMenuItem extends ImageView {
                 for (int a = 0; a < popupLayout.getChildCount(); a++) {
                     View child = popupLayout.getChildAt(a);
                     child.getHitRect(rect);
-                    if ((Integer)child.getTag() < 100) {
-                        if (!rect.contains((int)x, (int)y)) {
+                    if ((Integer) child.getTag() < 100) {
+                        if (!rect.contains((int) x, (int) y)) {
                             child.setPressed(false);
                             child.setSelected(false);
                             if (Build.VERSION.SDK_INT >= 21) {
@@ -153,7 +146,7 @@ public class ActionBarMenuItem extends ImageView {
                     if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
                         if (popupWindow != null && popupWindow.isShowing()) {
                             v.getHitRect(rect);
-                            if (!rect.contains((int)event.getX(), (int)event.getY())) {
+                            if (!rect.contains((int) event.getX(), (int) event.getY())) {
                                 popupWindow.dismiss();
                             }
                         }
@@ -192,7 +185,7 @@ public class ActionBarMenuItem extends ImageView {
             }
         }
         popupLayout.addView(textView);
-        LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams)textView.getLayoutParams();
+        LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) textView.getLayoutParams();
         if (LocaleController.isRTL) {
             layoutParams.gravity = Gravity.RIGHT;
         }
@@ -241,7 +234,7 @@ public class ActionBarMenuItem extends ImageView {
             popupWindow.getContentView().setOnKeyListener(new OnKeyListener() {
                 @Override
                 public boolean onKey(View v, int keyCode, KeyEvent event) {
-                    if (keyCode ==  KeyEvent.KEYCODE_MENU && event.getRepeatCount() == 0 && event.getAction() == KeyEvent.ACTION_UP && popupWindow != null && popupWindow.isShowing()) {
+                    if (keyCode == KeyEvent.KEYCODE_MENU && event.getRepeatCount() == 0 && event.getAction() == KeyEvent.ACTION_UP && popupWindow != null && popupWindow.isShowing()) {
                         popupWindow.dismiss();
                         return true;
                     }
@@ -397,7 +390,7 @@ public class ActionBarMenuItem extends ImageView {
                 searchField.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
             }
             parentMenu.addView(searchField, 0);
-            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams)searchField.getLayoutParams();
+            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) searchField.getLayoutParams();
             layoutParams.weight = 1;
             layoutParams.width = 0;
             layoutParams.gravity = Gravity.CENTER_VERTICAL;
@@ -451,5 +444,13 @@ public class ActionBarMenuItem extends ImageView {
         if (view != null) {
             view.setVisibility(VISIBLE);
         }
+    }
+
+    public static interface ActionBarMenuItemSearchListener {
+        public abstract void onSearchExpand();
+
+        public abstract void onSearchCollapse();
+
+        public abstract void onTextChanged(EditText editText);
     }
 }

@@ -17,31 +17,27 @@ import android.graphics.PorterDuffXfermode;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.messenger.R;
 import org.telegram.ui.AnimationCompat.ObjectAnimatorProxy;
 
 public class CheckBox extends View {
 
+    private final static float progressBounceDiff = 0.2f;
     private static Drawable checkDrawable;
     private static Paint paint;
     private static Paint eraser;
     private static Paint eraser2;
     private static Paint checkPaint;
-
     private Bitmap drawBitmap;
     private Bitmap checkBitmap;
     private Canvas bitmapCanvas;
     private Canvas checkCanvas;
-
     private float progress;
     private ObjectAnimatorProxy checkAnimator;
     private boolean isCheckAnimation = true;
-
     private boolean attachedToWindow;
     private boolean isChecked = false;
-
-    private final static float progressBounceDiff = 0.2f;
 
     public CheckBox(Context context) {
         super(context);
@@ -71,16 +67,16 @@ public class CheckBox extends View {
         }
     }
 
+    public float getProgress() {
+        return progress;
+    }
+
     public void setProgress(float value) {
         if (progress == value) {
             return;
         }
         progress = value;
         invalidate();
-    }
-
-    public float getProgress() {
-        return progress;
     }
 
     private void cancelCheckAnimator() {

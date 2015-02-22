@@ -29,14 +29,12 @@ public class Datacenter {
     public long authKeyId;
     public int lastInitVersion = 0;
     public int overridePort = -1;
+    public TcpConnection connection;
+    public TcpConnection pushConnection;
     private volatile int currentPortNum = 0;
     private volatile int currentAddressNum = 0;
-
-    public TcpConnection connection;
     private TcpConnection downloadConnection;
     private TcpConnection uploadConnection;
-    public TcpConnection pushConnection;
-
     private ArrayList<ServerSalt> authServerSaltSet = new ArrayList<ServerSalt>();
 
     public Datacenter() {
@@ -265,18 +263,6 @@ public class Datacenter {
         return result;
     }
 
-    private class SaltComparator implements Comparator<ServerSalt> {
-        @Override
-        public int compare(ServerSalt o1, ServerSalt o2) {
-            if (o1.validSince < o2.validSince) {
-                return -1;
-            } else if (o1.validSince > o2.validSince) {
-                return 1;
-            }
-            return 0;
-        }
-    }
-
     public void mergeServerSalts(int date, ArrayList<TLRPC.TL_futureSalt> salts) {
         if (salts == null) {
             return;
@@ -388,5 +374,17 @@ public class Datacenter {
             connection.connect();
         }
         return connection;
+    }
+
+    private class SaltComparator implements Comparator<ServerSalt> {
+        @Override
+        public int compare(ServerSalt o1, ServerSalt o2) {
+            if (o1.validSince < o2.validSince) {
+                return -1;
+            } else if (o1.validSince > o2.validSince) {
+                return 1;
+            }
+            return 0;
+        }
     }
 }

@@ -18,18 +18,18 @@ import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 
-import org.telegram.android.AndroidUtilities;
 import org.telegram.PhoneFormat.PhoneFormat;
-import org.telegram.android.LocaleController;
-import org.telegram.android.MessageObject;
-import org.telegram.messenger.FileLog;
-import org.telegram.messenger.TLRPC;
+import org.telegram.R;
+import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
 import org.telegram.android.Emoji;
-import org.telegram.android.MessagesController;
-import org.telegram.messenger.R;
-import org.telegram.messenger.UserConfig;
 import org.telegram.android.ImageReceiver;
+import org.telegram.android.LocaleController;
+import org.telegram.android.MessageObject;
+import org.telegram.android.MessagesController;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.TLRPC;
+import org.telegram.messenger.UserConfig;
 import org.telegram.ui.Components.AvatarDrawable;
 
 public class DialogCell extends BaseCell {
@@ -52,25 +52,19 @@ public class DialogCell extends BaseCell {
     private static Drawable broadcastDrawable;
 
     private static Paint linePaint;
-
+    public boolean useSeparator = false;
     private long currentDialogId;
     private boolean allowPrintStrings;
     private int lastMessageDate;
     private int unreadCount;
     private boolean lastUnreadState;
     private MessageObject message;
-
     private ImageReceiver avatarImage;
     private AvatarDrawable avatarDrawable;
-
     private TLRPC.User user = null;
     private TLRPC.Chat chat = null;
     private TLRPC.EncryptedChat encryptedChat = null;
     private CharSequence lastPrintString = null;
-
-    public boolean useSeparator = false;
-
-
     private int nameLeft;
     private StaticLayout nameLayout;
     private boolean drawNameLock;
@@ -105,6 +99,14 @@ public class DialogCell extends BaseCell {
     private StaticLayout countLayout;
 
     private int avatarTop = AndroidUtilities.dp(10);
+
+    public DialogCell(Context context) {
+        super(context);
+        init();
+        avatarImage = new ImageReceiver(this);
+        avatarImage.setRoundRadius(AndroidUtilities.dp(26));
+        avatarDrawable = new AvatarDrawable();
+    }
 
     private void init() {
         if (namePaint == null) {
@@ -152,14 +154,6 @@ public class DialogCell extends BaseCell {
             groupDrawable = getResources().getDrawable(R.drawable.list_group);
             broadcastDrawable = getResources().getDrawable(R.drawable.list_broadcast);
         }
-    }
-
-    public DialogCell(Context context) {
-        super(context);
-        init();
-        avatarImage = new ImageReceiver(this);
-        avatarImage.setRoundRadius(AndroidUtilities.dp(26));
-        avatarDrawable = new AvatarDrawable();
     }
 
     public void setDialog(long dialog_id, MessageObject messageObject, boolean usePrintStrings, int date, int unread) {
@@ -491,7 +485,7 @@ public class DialogCell extends BaseCell {
                 messageLeft += w;
             }
         } else if (countString != null) {
-            countWidth = Math.max(AndroidUtilities.dp(12), (int)Math.ceil(countPaint.measureText(countString)));
+            countWidth = Math.max(AndroidUtilities.dp(12), (int) Math.ceil(countPaint.measureText(countString)));
             countLayout = new StaticLayout(countString, countPaint, countWidth, Layout.Alignment.ALIGN_CENTER, 1.0f, 0.0f, false);
             int w = countWidth + AndroidUtilities.dp(18);
             messageWidth -= w;
@@ -617,8 +611,8 @@ public class DialogCell extends BaseCell {
         chat = null;
         encryptedChat = null;
 
-        int lower_id = (int)currentDialogId;
-        int high_id = (int)(currentDialogId >> 32);
+        int lower_id = (int) currentDialogId;
+        int high_id = (int) (currentDialogId >> 32);
         if (lower_id != 0) {
             if (high_id == 1) {
                 chat = MessagesController.getInstance().getChat(lower_id);

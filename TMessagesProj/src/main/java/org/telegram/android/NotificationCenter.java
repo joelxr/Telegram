@@ -71,15 +71,12 @@ public class NotificationCenter {
     public final static int albumsDidLoaded = 50008;
     public final static int audioDidSent = 50009;
     public final static int audioDidStarted = 50010;
-
+    private static volatile NotificationCenter Instance = null;
     final private HashMap<Integer, ArrayList<Object>> observers = new HashMap<Integer, ArrayList<Object>>();
-
     final private HashMap<Integer, Object> removeAfterBroadcast = new HashMap<Integer, Object>();
     final private HashMap<Integer, Object> addAfterBroadcast = new HashMap<Integer, Object>();
-
     private int broadcasting = 0;
 
-    private static volatile NotificationCenter Instance = null;
     public static NotificationCenter getInstance() {
         NotificationCenter localInstance = Instance;
         if (localInstance == null) {
@@ -91,10 +88,6 @@ public class NotificationCenter {
             }
         }
         return localInstance;
-    }
-
-    public interface NotificationCenterDelegate {
-        public abstract void didReceivedNotification(int id, Object... args);
     }
 
     public void postNotificationName(int id, Object... args) {
@@ -155,5 +148,9 @@ public class NotificationCenter {
                 }
             }
         }
+    }
+
+    public interface NotificationCenterDelegate {
+        public abstract void didReceivedNotification(int id, Object... args);
     }
 }

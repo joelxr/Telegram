@@ -13,8 +13,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.IBinder;
 
-import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
 
 public class NotificationsService extends Service {
 

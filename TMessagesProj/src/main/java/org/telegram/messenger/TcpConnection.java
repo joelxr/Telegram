@@ -20,42 +20,25 @@ import jawnae.pyronet.PyroClient;
 import jawnae.pyronet.PyroSelector;
 
 public class TcpConnection extends ConnectionContext {
-    public enum TcpConnectionState {
-        TcpConnectionStageIdle,
-        TcpConnectionStageConnecting,
-        TcpConnectionStageReconnecting,
-        TcpConnectionStageConnected,
-        TcpConnectionStageSuspended
-    }
-
-    public abstract static interface TcpConnectionDelegate {
-        public abstract void tcpConnectionClosed(TcpConnection connection);
-        public abstract void tcpConnectionConnected(TcpConnection connection);
-        public abstract void tcpConnectionQuiackAckReceived(TcpConnection connection, int ack);
-        public abstract void tcpConnectionReceivedData(TcpConnection connection, ByteBufferDesc data, int length);
-    }
-
+    static volatile Integer nextChannelToken = 1;
     private static PyroSelector selector;
-    private PyroClient client;
+    private final Object timerSync = new Object();
     public TcpConnectionState connectionState;
     public volatile int channelToken = 0;
+    public TcpConnectionDelegate delegate;
+    public int transportRequestClass;
+    private PyroClient client;
     private String hostAddress;
     private int hostPort;
     private int datacenterId;
     private int failedConnectionCount;
-    public TcpConnectionDelegate delegate;
     private ByteBufferDesc restOfTheData;
     private boolean hasSomeDataSinceLastConnect = false;
     private int willRetryConnectCount = 5;
     private boolean isNextPort = false;
-    private final Object timerSync = new Object();
     private boolean wasConnected;
     private int lastPacketLength;
-
-    public int transportRequestClass;
-
     private boolean firstPacket;
-
     private Timer reconnectTimer;
 
     public TcpConnection(int did) {
@@ -68,7 +51,6 @@ public class TcpConnection extends ConnectionContext {
         connectionState = TcpConnectionState.TcpConnectionStageIdle;
     }
 
-    static volatile Integer nextChannelToken = 1;
     static int generateChannelToken() {
         return nextChannelToken++;
     }
@@ -676,5 +658,20 @@ public class TcpConnection extends ConnectionContext {
 
     @Override
     public void sentData(PyroClient client, int bytes) {
+    }
+
+    public enum TcpConnectionState {
+        TcpConnectionStageIdle,
+        TcpConnectionStageConnecting,
+        TcpConnectionStageReconnecting,
+        TcpConnectionStageConnected,
+        TcpConnectionStageSuspended
+    }
+
+    public abstract static interface TcpConnectionDelegate {
+        public abstract void tcpConnectionClosed(TcpConnection connection);
+        public abstract void tcpConnectionConnected(TcpConnection connection);
+        public abstract void tcpConnectionQuiackAckReceived(TcpConnection connection, int ack);
+        public abstract void tcpConnectionReceivedData(TcpConnection connection, ByteBufferDesc data, int length);
     }
 }

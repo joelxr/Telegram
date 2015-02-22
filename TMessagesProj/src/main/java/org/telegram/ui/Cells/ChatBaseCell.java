@@ -20,34 +20,19 @@ import android.text.TextUtils;
 import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
-import org.telegram.android.LocaleController;
-import org.telegram.messenger.TLRPC;
-import org.telegram.android.MessagesController;
-import org.telegram.messenger.R;
-import org.telegram.android.MessageObject;
 import org.telegram.android.ImageReceiver;
+import org.telegram.android.LocaleController;
+import org.telegram.android.MessageObject;
+import org.telegram.android.MessagesController;
+import org.telegram.messenger.TLRPC;
 import org.telegram.ui.Components.AvatarDrawable;
 
 public class ChatBaseCell extends BaseCell {
 
-    public static interface ChatBaseCellDelegate {
-        public abstract void didPressedUserAvatar(ChatBaseCell cell, TLRPC.User user);
-        public abstract void didPressedCancelSendButton(ChatBaseCell cell);
-        public abstract void didLongPressed(ChatBaseCell cell);
-        public abstract boolean canPerformActions();
-    }
-
-    public boolean isChat = false;
-    protected boolean isPressed = false;
-    protected boolean forwardName = false;
-    protected boolean media = false;
-    private boolean isCheckPressed = true;
-    private boolean wasLayout = false;
-    protected boolean isAvatarVisible = false;
-    protected MessageObject currentMessageObject;
-
+    protected static Drawable mediaBackgroundDrawable;
     private static Drawable backgroundDrawableIn;
     private static Drawable backgroundDrawableInSelected;
     private static Drawable backgroundDrawableOut;
@@ -65,56 +50,51 @@ public class ChatBaseCell extends BaseCell {
     private static Drawable clockMediaDrawable;
     private static Drawable broadcastMediaDrawable;
     private static Drawable errorDrawable;
-    protected static Drawable mediaBackgroundDrawable;
     private static TextPaint timePaintIn;
     private static TextPaint timePaintOut;
     private static TextPaint timeMediaPaint;
     private static TextPaint namePaint;
     private static TextPaint forwardNamePaint;
-
+    public boolean isChat = false;
+    protected boolean isPressed = false;
+    protected boolean forwardName = false;
+    protected boolean media = false;
+    protected boolean isAvatarVisible = false;
+    protected MessageObject currentMessageObject;
     protected int backgroundWidth = 100;
-
     protected int layoutWidth;
     protected int layoutHeight;
-
+    protected int nameWidth;
+    protected boolean drawName = false;
+    protected int forwardedNameWidth;
+    protected boolean drawForwardedName = false;
+    protected int timeWidth;
+    protected boolean drawTime = true;
+    protected ChatBaseCellDelegate delegate;
+    protected int namesOffset = 0;
+    private boolean isCheckPressed = true;
+    private boolean wasLayout = false;
     private ImageReceiver avatarImage;
     private AvatarDrawable avatarDrawable;
     private boolean avatarPressed = false;
     private boolean forwardNamePressed = false;
-
     private StaticLayout nameLayout;
-    protected int nameWidth;
     private float nameOffsetX = 0;
-    protected boolean drawName = false;
-
     private StaticLayout forwardedNameLayout;
-    protected int forwardedNameWidth;
-    protected boolean drawForwardedName = false;
     private int forwardNameX;
     private int forwardNameY;
     private float forwardNameOffsetX = 0;
-
     private StaticLayout timeLayout;
-    protected int timeWidth;
     private int timeX;
     private TextPaint currentTimePaint;
     private String currentTimeString;
-    protected boolean drawTime = true;
-
     private TLRPC.User currentUser;
     private TLRPC.FileLocation currentPhoto;
     private String currentNameString;
-
     private TLRPC.User currentForwardUser;
     private String currentForwardNameString;
-
-    protected ChatBaseCellDelegate delegate;
-
-    protected int namesOffset = 0;
-
     private int last_send_state = 0;
     private int last_delete_date = 0;
-
     public ChatBaseCell(Context context) {
         super(context);
         if (backgroundDrawableIn == null) {
@@ -222,6 +202,10 @@ public class ChatBaseCell extends BaseCell {
         return currentForwardNameString == null && newNameString != null || currentForwardNameString != null && newNameString == null || currentForwardNameString != null && newNameString != null && !currentForwardNameString.equals(newNameString);
     }
 
+    public final MessageObject getMessageObject() {
+        return currentMessageObject;
+    }
+
     public void setMessageObject(MessageObject messageObject) {
         currentMessageObject = messageObject;
         last_send_state = messageObject.messageOwner.send_state;
@@ -259,7 +243,7 @@ public class ChatBaseCell extends BaseCell {
         }
 
         currentTimeString = LocaleController.formatterDay.format((long) (currentMessageObject.messageOwner.date) * 1000);
-        timeWidth = (int)Math.ceil(currentTimePaint.measureText(currentTimeString));
+        timeWidth = (int) Math.ceil(currentTimePaint.measureText(currentTimeString));
 
         namesOffset = 0;
 
@@ -270,7 +254,7 @@ public class ChatBaseCell extends BaseCell {
             CharSequence nameStringFinal = TextUtils.ellipsize(currentNameString.replace("\n", " "), namePaint, nameWidth - AndroidUtilities.dp(12), TextUtils.TruncateAt.END);
             nameLayout = new StaticLayout(nameStringFinal, namePaint, nameWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
             if (nameLayout.getLineCount() > 0) {
-                nameWidth = (int)Math.ceil(nameLayout.getLineWidth(0));
+                nameWidth = (int) Math.ceil(nameLayout.getLineWidth(0));
                 namesOffset += AndroidUtilities.dp(18);
                 nameOffsetX = nameLayout.getLineLeft(0);
             } else {
@@ -311,10 +295,6 @@ public class ChatBaseCell extends BaseCell {
         }
 
         requestLayout();
-    }
-
-    public final MessageObject getMessageObject() {
-        return currentMessageObject;
     }
 
     protected int getMaxNameWidth() {
@@ -524,7 +504,7 @@ public class ChatBaseCell extends BaseCell {
                 boolean drawCheck2 = false;
                 boolean drawClock = false;
                 boolean drawError = false;
-                boolean isBroadcast = (int)(currentMessageObject.getDialogId() >> 32) == 1;
+                boolean isBroadcast = (int) (currentMessageObject.getDialogId() >> 32) == 1;
 
                 if (currentMessageObject.isSending()) {
                     drawCheck1 = false;
@@ -606,5 +586,15 @@ public class ChatBaseCell extends BaseCell {
                 }
             }
         }
+    }
+
+    public static interface ChatBaseCellDelegate {
+        public abstract void didPressedUserAvatar(ChatBaseCell cell, TLRPC.User user);
+
+        public abstract void didPressedCancelSendButton(ChatBaseCell cell);
+
+        public abstract void didLongPressed(ChatBaseCell cell);
+
+        public abstract boolean canPerformActions();
     }
 }

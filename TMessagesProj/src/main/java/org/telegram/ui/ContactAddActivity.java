@@ -27,35 +27,33 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import org.telegram.android.AndroidUtilities;
 import org.telegram.PhoneFormat.PhoneFormat;
+import org.telegram.R;
+import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
 import org.telegram.android.LocaleController;
-import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.TLRPC;
 import org.telegram.android.MessagesController;
 import org.telegram.android.NotificationCenter;
-import org.telegram.messenger.R;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
+import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
-import org.telegram.ui.ActionBar.BaseFragment;
 
 public class ContactAddActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
+    private final static int done_button = 1;
     private View doneButton;
     private EditText firstNameField;
     private EditText lastNameField;
     private BackupImageView avatarImage;
     private TextView nameTextView;
     private TextView onlineTextView;
-
     private int user_id;
     private boolean addContact;
     private String phone = null;
-
-    private final static int done_button = 1;
 
     public ContactAddActivity(Bundle args) {
         super(args);

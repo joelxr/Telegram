@@ -12,6 +12,8 @@ import java.util.ArrayList;
 
 public class BuffersStorage {
 
+    private final static Object sync = new Object();
+    private static volatile BuffersStorage Instance = null;
     private final ArrayList<ByteBufferDesc> freeBuffers128;
     private final ArrayList<ByteBufferDesc> freeBuffers1024;
     private final ArrayList<ByteBufferDesc> freeBuffers4096;
@@ -19,22 +21,6 @@ public class BuffersStorage {
     private final ArrayList<ByteBufferDesc> freeBuffers32768;
     private final ArrayList<ByteBufferDesc> freeBuffersBig;
     private boolean isThreadSafe;
-    private final static Object sync = new Object();
-
-    private static volatile BuffersStorage Instance = null;
-    public static BuffersStorage getInstance() {
-        BuffersStorage localInstance = Instance;
-        if (localInstance == null) {
-            synchronized (BuffersStorage.class) {
-                localInstance = Instance;
-                if (localInstance == null) {
-                    Instance = localInstance = new BuffersStorage(true);
-                }
-            }
-        }
-        return localInstance;
-    }
-
     public BuffersStorage(boolean threadSafe) {
         isThreadSafe = threadSafe;
         freeBuffers128 = new ArrayList<ByteBufferDesc>();
@@ -47,6 +33,19 @@ public class BuffersStorage {
         for (int a = 0; a < 5; a++) {
             freeBuffers128.add(new ByteBufferDesc(128));
         }
+    }
+
+    public static BuffersStorage getInstance() {
+        BuffersStorage localInstance = Instance;
+        if (localInstance == null) {
+            synchronized (BuffersStorage.class) {
+                localInstance = Instance;
+                if (localInstance == null) {
+                    Instance = localInstance = new BuffersStorage(true);
+                }
+            }
+        }
+        return localInstance;
     }
 
     public ByteBufferDesc getFreeBuffer(int size) {

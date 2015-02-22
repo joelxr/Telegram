@@ -13,12 +13,12 @@ import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.android.LocaleController;
-import org.telegram.messenger.TLRPC;
 import org.telegram.android.ContactsController;
+import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
-import org.telegram.messenger.R;
+import org.telegram.messenger.TLRPC;
 import org.telegram.ui.AnimationCompat.ViewProxy;
 import org.telegram.ui.Cells.DividerCell;
 import org.telegram.ui.Cells.GreySectionCell;
@@ -224,9 +224,9 @@ public class ContactsAdapter extends BaseSectionsAdapter {
 
             ArrayList<TLRPC.TL_contact> arr = ContactsController.getInstance().usersSectionsDict.get(ContactsController.getInstance().sortedUsersSectionsArray.get(section - (onlyUsers ? 0 : 1)));
             TLRPC.User user = MessagesController.getInstance().getUser(arr.get(position).user_id);
-            ((UserCell)convertView).setData(user, null, null, 0);
+            ((UserCell) convertView).setData(user, null, null, 0);
             if (checkedMap != null) {
-                ((UserCell) convertView).setChecked(checkedMap.containsKey(user.id), !scrolling  && Build.VERSION.SDK_INT > 10);
+                ((UserCell) convertView).setChecked(checkedMap.containsKey(user.id), !scrolling && Build.VERSION.SDK_INT > 10);
             }
             if (ignoreUsers != null) {
                 if (ignoreUsers.containsKey(user.id)) {

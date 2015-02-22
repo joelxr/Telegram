@@ -10,6 +10,9 @@ apply plugin: 'com.android.application'
 
 repositories {
     mavenCentral()
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 tasks.withType(JavaCompile) {
@@ -17,6 +20,8 @@ tasks.withType(JavaCompile) {
 }
 
 dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.spotify.sdk:spotifysdk:1.0.0-beta8@aar'
     compile 'com.android.support:support-v4:21.0.+'
     compile 'com.google.android.gms:play-services:3.2.+'
     compile 'net.hockeyapp.android:HockeySDK:3.0.2'
@@ -78,7 +83,8 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 8
+        applicationId "org.telegram"
+        minSdkVersion 14
         targetSdkVersion 21
         versionCode 403
         versionName "2.1.0"

@@ -9445,9 +9445,8 @@ public class TLRPC {
     }
 
     public static class TL_msg_container extends TLObject {
-        public ArrayList<TL_protoMessage> messages;
-
         public static int constructor = 0x73f1f8dc;
+        public ArrayList<TL_protoMessage> messages;
 
         public void readParams(AbsSerializedData stream) {
             messages = new ArrayList<TL_protoMessage>();

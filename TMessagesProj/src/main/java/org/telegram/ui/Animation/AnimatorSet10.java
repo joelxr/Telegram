@@ -25,13 +25,13 @@ import java.util.List;
 
 public final class AnimatorSet10 extends Animator10 {
 
+    boolean mTerminated = false;
     private ArrayList<Animator10> mPlayingSet = new ArrayList<Animator10>();
     private HashMap<Animator10, Node> mNodeMap = new HashMap<Animator10, Node>();
     private ArrayList<Node> mNodes = new ArrayList<Node>();
     private ArrayList<Node> mSortedNodes = new ArrayList<Node>();
     private boolean mNeedsSort = true;
     private AnimatorSetListener mSetListener = null;
-    boolean mTerminated = false;
     private boolean mStarted = false;
     private long mStartDelay = 0;
     private ValueAnimator mDelayAnim = null;
@@ -69,7 +69,7 @@ public final class AnimatorSet10 extends Animator10 {
                 play(items[0]);
             } else {
                 for (int i = 0; i < items.length - 1; ++i) {
-                    play(items[i]).before(items[i+1]);
+                    play(items[i]).before(items[i + 1]);
                 }
             }
         }
@@ -82,7 +82,7 @@ public final class AnimatorSet10 extends Animator10 {
                 play(items.get(0));
             } else {
                 for (int i = 0; i < items.size() - 1; ++i) {
-                    play(items.get(i)).before(items.get(i+1));
+                    play(items.get(i)).before(items.get(i + 1));
                 }
             }
         }
@@ -109,13 +109,13 @@ public final class AnimatorSet10 extends Animator10 {
     }
 
     @Override
-    public void setInterpolator(Interpolator interpolator) {
-        mInterpolator = interpolator;
+    public Interpolator getInterpolator() {
+        return mInterpolator;
     }
 
     @Override
-    public Interpolator getInterpolator() {
-        return mInterpolator;
+    public void setInterpolator(Interpolator interpolator) {
+        mInterpolator = interpolator;
     }
 
     public Builder play(Animator10 anim) {
@@ -140,7 +140,7 @@ public final class AnimatorSet10 extends Animator10 {
             }
             if (mDelayAnim != null && mDelayAnim.isRunning()) {
                 mDelayAnim.cancel();
-            } else  if (mSortedNodes.size() > 0) {
+            } else if (mSortedNodes.size() > 0) {
                 for (Node node : mSortedNodes) {
                     node.animation.cancel();
                 }
@@ -335,9 +335,11 @@ public final class AnimatorSet10 extends Animator10 {
             mDelayAnim.setDuration(mStartDelay);
             mDelayAnim.addListener(new AnimatorListenerAdapter10() {
                 boolean canceled = false;
+
                 public void onAnimationCancel(Animator10 anim) {
                     canceled = true;
                 }
+
                 public void onAnimationEnd(Animator10 anim) {
                     if (!canceled) {
                         int numNodes = nodesToStart.size();
@@ -425,6 +427,60 @@ public final class AnimatorSet10 extends Animator10 {
         return anim;
     }
 
+    private void sortNodes() {
+        if (mNeedsSort) {
+            mSortedNodes.clear();
+            ArrayList<Node> roots = new ArrayList<Node>();
+            int numNodes = mNodes.size();
+            for (Node node : mNodes) {
+                if (node.dependencies == null || node.dependencies.size() == 0) {
+                    roots.add(node);
+                }
+            }
+            ArrayList<Node> tmpRoots = new ArrayList<Node>();
+            while (roots.size() > 0) {
+                int numRoots = roots.size();
+                for (Node root : roots) {
+                    mSortedNodes.add(root);
+                    if (root.nodeDependents != null) {
+                        int numDependents = root.nodeDependents.size();
+                        for (int j = 0; j < numDependents; ++j) {
+                            Node node = root.nodeDependents.get(j);
+                            node.nodeDependencies.remove(root);
+                            if (node.nodeDependencies.size() == 0) {
+                                tmpRoots.add(node);
+                            }
+                        }
+                    }
+                }
+                roots.clear();
+                roots.addAll(tmpRoots);
+                tmpRoots.clear();
+            }
+            mNeedsSort = false;
+            if (mSortedNodes.size() != mNodes.size()) {
+                throw new IllegalStateException("Circular dependencies cannot exist in AnimatorSet");
+            }
+        } else {
+            int numNodes = mNodes.size();
+            for (Node node : mNodes) {
+                if (node.dependencies != null && node.dependencies.size() > 0) {
+                    int numDependencies = node.dependencies.size();
+                    for (int j = 0; j < numDependencies; ++j) {
+                        Dependency dependency = node.dependencies.get(j);
+                        if (node.nodeDependencies == null) {
+                            node.nodeDependencies = new ArrayList<Node>();
+                        }
+                        if (!node.nodeDependencies.contains(dependency.node)) {
+                            node.nodeDependencies.add(dependency.node);
+                        }
+                    }
+                }
+                node.done = false;
+            }
+        }
+    }
+
     private static class DependencyListener implements AnimatorListener {
 
         private AnimatorSet10 mAnimatorSet;
@@ -475,6 +531,58 @@ public final class AnimatorSet10 extends Animator10 {
             if (mNode.tmpDependencies.size() == 0) {
                 mNode.animation.start();
                 mAnimatorSet.mPlayingSet.add(mNode.animation);
+            }
+        }
+    }
+
+    private static class Dependency {
+        static final int WITH = 0;
+        static final int AFTER = 1;
+        public Node node;
+        public int rule;
+
+        public Dependency(Node node, int rule) {
+            this.node = node;
+            this.rule = rule;
+        }
+    }
+
+    private static class Node implements Cloneable {
+        public Animator10 animation;
+        public ArrayList<Dependency> dependencies = null;
+        public ArrayList<Dependency> tmpDependencies = null;
+        public ArrayList<Node> nodeDependencies = null;
+        public ArrayList<Node> nodeDependents = null;
+        public boolean done = false;
+
+        public Node(Animator10 animation) {
+            this.animation = animation;
+        }
+
+        public void addDependency(Dependency dependency) {
+            if (dependencies == null) {
+                dependencies = new ArrayList<Dependency>();
+                nodeDependencies = new ArrayList<Node>();
+            }
+            dependencies.add(dependency);
+            if (!nodeDependencies.contains(dependency.node)) {
+                nodeDependencies.add(dependency.node);
+            }
+            Node dependencyNode = dependency.node;
+            if (dependencyNode.nodeDependents == null) {
+                dependencyNode.nodeDependents = new ArrayList<Node>();
+            }
+            dependencyNode.nodeDependents.add(this);
+        }
+
+        @Override
+        public Node clone() {
+            try {
+                Node node = (Node) super.clone();
+                node.animation = animation.clone();
+                return node;
+            } catch (CloneNotSupportedException e) {
+                throw new AssertionError();
             }
         }
     }
@@ -537,112 +645,6 @@ public final class AnimatorSet10 extends Animator10 {
 
         public void onAnimationStart(Animator10 animation) {
 
-        }
-    }
-
-    private void sortNodes() {
-        if (mNeedsSort) {
-            mSortedNodes.clear();
-            ArrayList<Node> roots = new ArrayList<Node>();
-            int numNodes = mNodes.size();
-            for (Node node : mNodes) {
-                if (node.dependencies == null || node.dependencies.size() == 0) {
-                    roots.add(node);
-                }
-            }
-            ArrayList<Node> tmpRoots = new ArrayList<Node>();
-            while (roots.size() > 0) {
-                int numRoots = roots.size();
-                for (Node root : roots) {
-                    mSortedNodes.add(root);
-                    if (root.nodeDependents != null) {
-                        int numDependents = root.nodeDependents.size();
-                        for (int j = 0; j < numDependents; ++j) {
-                            Node node = root.nodeDependents.get(j);
-                            node.nodeDependencies.remove(root);
-                            if (node.nodeDependencies.size() == 0) {
-                                tmpRoots.add(node);
-                            }
-                        }
-                    }
-                }
-                roots.clear();
-                roots.addAll(tmpRoots);
-                tmpRoots.clear();
-            }
-            mNeedsSort = false;
-            if (mSortedNodes.size() != mNodes.size()) {
-                throw new IllegalStateException("Circular dependencies cannot exist in AnimatorSet");
-            }
-        } else {
-            int numNodes = mNodes.size();
-            for (Node node : mNodes) {
-                if (node.dependencies != null && node.dependencies.size() > 0) {
-                    int numDependencies = node.dependencies.size();
-                    for (int j = 0; j < numDependencies; ++j) {
-                        Dependency dependency = node.dependencies.get(j);
-                        if (node.nodeDependencies == null) {
-                            node.nodeDependencies = new ArrayList<Node>();
-                        }
-                        if (!node.nodeDependencies.contains(dependency.node)) {
-                            node.nodeDependencies.add(dependency.node);
-                        }
-                    }
-                }
-                node.done = false;
-            }
-        }
-    }
-
-    private static class Dependency {
-        static final int WITH = 0;
-        static final int AFTER = 1;
-        public Node node;
-        public int rule;
-
-        public Dependency(Node node, int rule) {
-            this.node = node;
-            this.rule = rule;
-        }
-    }
-
-    private static class Node implements Cloneable {
-        public Animator10 animation;
-        public ArrayList<Dependency> dependencies = null;
-        public ArrayList<Dependency> tmpDependencies = null;
-        public ArrayList<Node> nodeDependencies = null;
-        public ArrayList<Node> nodeDependents = null;
-        public boolean done = false;
-
-        public Node(Animator10 animation) {
-            this.animation = animation;
-        }
-
-        public void addDependency(Dependency dependency) {
-            if (dependencies == null) {
-                dependencies = new ArrayList<Dependency>();
-                nodeDependencies = new ArrayList<Node>();
-            }
-            dependencies.add(dependency);
-            if (!nodeDependencies.contains(dependency.node)) {
-                nodeDependencies.add(dependency.node);
-            }
-            Node dependencyNode = dependency.node;
-            if (dependencyNode.nodeDependents == null) {
-                dependencyNode.nodeDependents = new ArrayList<Node>();
-            }
-            dependencyNode.nodeDependents.add(this);
-        }
-
-        @Override
-        public Node clone() {
-            try {
-                Node node = (Node) super.clone();
-                node.animation = animation.clone();
-                return node;
-            } catch (CloneNotSupportedException e) {
-               throw new AssertionError();
-            }
         }
     }
 

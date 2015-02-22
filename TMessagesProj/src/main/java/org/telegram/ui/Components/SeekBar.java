@@ -14,14 +14,10 @@ import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.messenger.R;
 
 public class SeekBar {
-
-    public abstract interface SeekBarDelegate {
-        public void onSeekBarDrag(float progress);
-    }
 
     private static Drawable thumbDrawable1;
     private static Drawable thumbDrawablePressed1;
@@ -36,11 +32,10 @@ public class SeekBar {
     public int type;
     public int thumbX = 0;
     public int thumbDX = 0;
-    private boolean pressed = false;
     public int width;
     public int height;
     public SeekBarDelegate delegate;
-
+    private boolean pressed = false;
     public SeekBar(Context context) {
         if (thumbDrawable1 == null) {
             thumbDrawable1 = context.getResources().getDrawable(R.drawable.player1);
@@ -61,20 +56,20 @@ public class SeekBar {
             int additionWidth = (height - thumbWidth) / 2;
             if (thumbX - additionWidth <= x && x <= thumbX + thumbWidth + additionWidth && y >= 0 && y <= height) {
                 pressed = true;
-                thumbDX = (int)(x - thumbX);
+                thumbDX = (int) (x - thumbX);
                 return true;
             }
         } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             if (pressed) {
                 if (action == MotionEvent.ACTION_UP && delegate != null) {
-                    delegate.onSeekBarDrag((float)thumbX / (float)(width - thumbWidth));
+                    delegate.onSeekBarDrag((float) thumbX / (float) (width - thumbWidth));
                 }
                 pressed = false;
                 return true;
             }
         } else if (action == MotionEvent.ACTION_MOVE) {
             if (pressed) {
-                thumbX = (int)(x - thumbDX);
+                thumbX = (int) (x - thumbDX);
                 if (thumbX < 0) {
                     thumbX = 0;
                 } else if (thumbX > width - thumbWidth) {
@@ -87,7 +82,7 @@ public class SeekBar {
     }
 
     public void setProgress(float progress) {
-        thumbX = (int)Math.ceil((width - thumbWidth) * progress);
+        thumbX = (int) Math.ceil((width - thumbWidth) * progress);
         if (thumbX < 0) {
             thumbX = 0;
         } else if (thumbX > width - thumbWidth) {
@@ -125,5 +120,9 @@ public class SeekBar {
         canvas.drawRect(thumbWidth / 2, height / 2 - AndroidUtilities.dp(1), thumbWidth / 2 + thumbX, height / 2 + AndroidUtilities.dp(1), outer);
         thumb.setBounds(thumbX, y, thumbX + thumbWidth, y + thumbHeight);
         thumb.draw(canvas);
+    }
+
+    public abstract interface SeekBarDelegate {
+        public void onSeekBarDrag(float progress);
     }
 }

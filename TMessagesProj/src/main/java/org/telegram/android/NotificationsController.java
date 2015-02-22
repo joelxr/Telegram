@@ -28,12 +28,12 @@ import android.support.v4.app.RemoteInput;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.telegram.R;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.R;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PopupNotificationActivity;
 
@@ -45,20 +45,22 @@ import java.util.List;
 public class NotificationsController {
 
     public static final String EXTRA_VOICE_REPLY = "extra_voice_reply";
-
+    private static volatile NotificationsController Instance = null;
+    public ArrayList<MessageObject> popupMessages = new ArrayList<MessageObject>();
     private ArrayList<MessageObject> pushMessages = new ArrayList<MessageObject>();
     private HashMap<Integer, MessageObject> pushMessagesDict = new HashMap<Integer, MessageObject>();
     private NotificationManagerCompat notificationManager = null;
     private HashMap<Long, Integer> pushDialogs = new HashMap<Long, Integer>();
     private HashMap<Long, Integer> wearNoticationsIds = new HashMap<Long, Integer>();
     private int wearNotificationId = 10000;
-    public ArrayList<MessageObject> popupMessages = new ArrayList<MessageObject>();
     private long openned_dialog_id = 0;
     private int total_unread_count = 0;
     private int personal_count = 0;
     private boolean notifyCheck = false;
+    public NotificationsController() {
+        notificationManager = NotificationManagerCompat.from(ApplicationLoader.applicationContext);
+    }
 
-    private static volatile NotificationsController Instance = null;
     public static NotificationsController getInstance() {
         NotificationsController localInstance = Instance;
         if (localInstance == null) {
@@ -72,8 +74,24 @@ public class NotificationsController {
         return localInstance;
     }
 
-    public NotificationsController() {
-        notificationManager = NotificationManagerCompat.from(ApplicationLoader.applicationContext);
+    public static String getLauncherClassName(Context context) {
+        try {
+            PackageManager pm = context.getPackageManager();
+
+            Intent intent = new Intent(Intent.ACTION_MAIN);
+            intent.addCategory(Intent.CATEGORY_LAUNCHER);
+
+            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
+            for (ResolveInfo resolveInfo : resolveInfos) {
+                String pkgName = resolveInfo.activityInfo.applicationInfo.packageName;
+                if (pkgName.equalsIgnoreCase(context.getPackageName())) {
+                    return resolveInfo.activityInfo.name;
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e("tmessages", e);
+        }
+        return null;
     }
 
     public void cleanup() {
@@ -922,26 +940,6 @@ public class NotificationsController {
         } catch (Throwable e) {
             FileLog.e("tmessages", e);
         }
-    }
-
-    public static String getLauncherClassName(Context context) {
-        try {
-            PackageManager pm = context.getPackageManager();
-
-            Intent intent = new Intent(Intent.ACTION_MAIN);
-            intent.addCategory(Intent.CATEGORY_LAUNCHER);
-
-            List<ResolveInfo> resolveInfos = pm.queryIntentActivities(intent, 0);
-            for (ResolveInfo resolveInfo : resolveInfos) {
-                String pkgName = resolveInfo.activityInfo.applicationInfo.packageName;
-                if (pkgName.equalsIgnoreCase(context.getPackageName())) {
-                    return resolveInfo.activityInfo.name;
-                }
-            }
-        } catch (Throwable e) {
-            FileLog.e("tmessages", e);
-        }
-        return null;
     }
 
     private boolean isPersonalMessage(MessageObject messageObject) {

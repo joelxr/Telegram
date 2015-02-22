@@ -29,6 +29,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ImageLoader;
 import org.telegram.android.ImageReceiver;
@@ -37,7 +38,6 @@ import org.telegram.android.NotificationCenter;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.R;
 import org.telegram.messenger.TLRPC;
 
 import java.io.File;
@@ -45,105 +45,7 @@ import java.util.ArrayList;
 
 public class SecretPhotoViewer implements NotificationCenter.NotificationCenterDelegate {
 
-    private class FrameLayoutDrawer extends FrameLayout {
-        public FrameLayoutDrawer(Context context) {
-            super(context);
-            setWillNotDraw(false);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            getInstance().onDraw(canvas);
-        }
-    }
-
-    private class FrameLayoutTouchListener extends FrameLayout {
-        public FrameLayoutTouchListener(Context context) {
-            super(context);
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            FileLog.e("tmessages", event.toString());
-            return super.onTouchEvent(event);
-        }
-    }
-
-    private class SecretDeleteTimer extends FrameLayout {
-        private String currentInfoString;
-        private int infoWidth;
-        private TextPaint infoPaint = null;
-        private StaticLayout infoLayout = null;
-        private Paint deleteProgressPaint;
-        private RectF deleteProgressRect = new RectF();
-        private Drawable drawable = null;
-
-        public SecretDeleteTimer(Context context) {
-            super(context);
-            setWillNotDraw(false);
-
-            infoPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-            infoPaint.setTextSize(AndroidUtilities.dp(15));
-            infoPaint.setColor(0xffffffff);
-
-            deleteProgressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            deleteProgressPaint.setColor(0xffe6e6e6);
-
-            drawable = getResources().getDrawable(R.drawable.circle1);
-        }
-
-        private void updateSecretTimeText() {
-            if (currentMessageObject == null) {
-                return;
-            }
-            String str = currentMessageObject.getSecretTimeString();
-            if (str == null) {
-                return;
-            }
-            if (currentInfoString == null || !currentInfoString.equals(str)) {
-                currentInfoString = str;
-                infoWidth = (int)Math.ceil(infoPaint.measureText(currentInfoString));
-                CharSequence str2 = TextUtils.ellipsize(currentInfoString, infoPaint, infoWidth, TextUtils.TruncateAt.END);
-                infoLayout = new StaticLayout(str2, infoPaint, infoWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
-                invalidate();
-            }
-        }
-
-        @Override
-        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-            deleteProgressRect.set(getMeasuredWidth() - AndroidUtilities.dp(30), AndroidUtilities.dp(2), getMeasuredWidth() - AndroidUtilities.dp(2), AndroidUtilities.dp(30));
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            if (currentMessageObject == null || currentMessageObject.messageOwner.destroyTime == 0) {
-                return;
-            }
-
-            if (drawable != null) {
-                drawable.setBounds(getMeasuredWidth() - AndroidUtilities.dp(32), 0, getMeasuredWidth(), AndroidUtilities.dp(32));
-                drawable.draw(canvas);
-            }
-
-            long msTime = System.currentTimeMillis() + ConnectionsManager.getInstance().getTimeDifference() * 1000;
-            float progress = Math.max(0, (long)currentMessageObject.messageOwner.destroyTime * 1000 - msTime) / (currentMessageObject.messageOwner.ttl * 1000.0f);
-            canvas.drawArc(deleteProgressRect, -90, -360 * progress, true, deleteProgressPaint);
-            if (progress != 0) {
-                int offset = AndroidUtilities.dp(2);
-                invalidate((int)deleteProgressRect.left - offset, (int)deleteProgressRect.top - offset, (int)deleteProgressRect.right + offset * 2, (int)deleteProgressRect.bottom + offset * 2);
-            }
-            updateSecretTimeText();
-
-            if (infoLayout != null) {
-                canvas.save();
-                canvas.translate(getMeasuredWidth() - AndroidUtilities.dp(38) - infoWidth, AndroidUtilities.dp(7));
-                infoLayout.draw(canvas);
-                canvas.restore();
-            }
-        }
-    }
-
+    private static volatile SecretPhotoViewer Instance = null;
     private Activity parentActivity;
     private WindowManager.LayoutParams windowLayoutParams;
     private FrameLayoutTouchListener windowView;
@@ -151,10 +53,8 @@ public class SecretPhotoViewer implements NotificationCenter.NotificationCenterD
     private ImageReceiver centerImage = new ImageReceiver();
     private SecretDeleteTimer secretDeleteTimer;
     private boolean isVisible = false;
-
     private MessageObject currentMessageObject = null;
 
-    private static volatile SecretPhotoViewer Instance = null;
     public static SecretPhotoViewer getInstance() {
         SecretPhotoViewer localInstance = Instance;
         if (localInstance == null) {
@@ -175,7 +75,7 @@ public class SecretPhotoViewer implements NotificationCenter.NotificationCenterD
             if (currentMessageObject == null) {
                 return;
             }
-            ArrayList<Integer> markAsDeletedMessages = (ArrayList<Integer>)args[0];
+            ArrayList<Integer> markAsDeletedMessages = (ArrayList<Integer>) args[0];
             if (markAsDeletedMessages.contains(currentMessageObject.messageOwner.id)) {
                 closePhoto();
             }
@@ -183,8 +83,8 @@ public class SecretPhotoViewer implements NotificationCenter.NotificationCenterD
             if (currentMessageObject == null || secretDeleteTimer == null) {
                 return;
             }
-            SparseArray<ArrayList<Integer>> mids = (SparseArray<ArrayList<Integer>>)args[0];
-            for(int i = 0; i < mids.size(); i++) {
+            SparseArray<ArrayList<Integer>> mids = (SparseArray<ArrayList<Integer>>) args[0];
+            for (int i = 0; i < mids.size(); i++) {
                 int key = mids.keyAt(i);
                 ArrayList<Integer> arr = mids.get(key);
                 for (Integer mid : arr) {
@@ -212,7 +112,7 @@ public class SecretPhotoViewer implements NotificationCenter.NotificationCenterD
         containerView = new FrameLayoutDrawer(activity);
         containerView.setFocusable(false);
         windowView.addView(containerView);
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams)containerView.getLayoutParams();
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) containerView.getLayoutParams();
         layoutParams.width = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.height = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.gravity = Gravity.TOP | Gravity.LEFT;
@@ -229,7 +129,7 @@ public class SecretPhotoViewer implements NotificationCenter.NotificationCenterD
 
         secretDeleteTimer = new SecretDeleteTimer(activity);
         containerView.addView(secretDeleteTimer);
-        layoutParams = (FrameLayout.LayoutParams)secretDeleteTimer.getLayoutParams();
+        layoutParams = (FrameLayout.LayoutParams) secretDeleteTimer.getLayoutParams();
         layoutParams.gravity = Gravity.TOP | Gravity.RIGHT;
         layoutParams.width = AndroidUtilities.dp(100);
         layoutParams.height = AndroidUtilities.dp(32);
@@ -317,7 +217,7 @@ public class SecretPhotoViewer implements NotificationCenter.NotificationCenterD
         AndroidUtilities.runOnUIThread(new Runnable() {
             @Override
             public void run() {
-                centerImage.setImageBitmap((Bitmap)null);
+                centerImage.setImageBitmap((Bitmap) null);
             }
         });
         try {
@@ -368,5 +268,104 @@ public class SecretPhotoViewer implements NotificationCenter.NotificationCenterD
             centerImage.draw(canvas);
         }
         canvas.restore();
+    }
+
+    private class FrameLayoutDrawer extends FrameLayout {
+        public FrameLayoutDrawer(Context context) {
+            super(context);
+            setWillNotDraw(false);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            getInstance().onDraw(canvas);
+        }
+    }
+
+    private class FrameLayoutTouchListener extends FrameLayout {
+        public FrameLayoutTouchListener(Context context) {
+            super(context);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            FileLog.e("tmessages", event.toString());
+            return super.onTouchEvent(event);
+        }
+    }
+
+    private class SecretDeleteTimer extends FrameLayout {
+        private String currentInfoString;
+        private int infoWidth;
+        private TextPaint infoPaint = null;
+        private StaticLayout infoLayout = null;
+        private Paint deleteProgressPaint;
+        private RectF deleteProgressRect = new RectF();
+        private Drawable drawable = null;
+
+        public SecretDeleteTimer(Context context) {
+            super(context);
+            setWillNotDraw(false);
+
+            infoPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            infoPaint.setTextSize(AndroidUtilities.dp(15));
+            infoPaint.setColor(0xffffffff);
+
+            deleteProgressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            deleteProgressPaint.setColor(0xffe6e6e6);
+
+            drawable = getResources().getDrawable(R.drawable.circle1);
+        }
+
+        private void updateSecretTimeText() {
+            if (currentMessageObject == null) {
+                return;
+            }
+            String str = currentMessageObject.getSecretTimeString();
+            if (str == null) {
+                return;
+            }
+            if (currentInfoString == null || !currentInfoString.equals(str)) {
+                currentInfoString = str;
+                infoWidth = (int) Math.ceil(infoPaint.measureText(currentInfoString));
+                CharSequence str2 = TextUtils.ellipsize(currentInfoString, infoPaint, infoWidth, TextUtils.TruncateAt.END);
+                infoLayout = new StaticLayout(str2, infoPaint, infoWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+                invalidate();
+            }
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+            deleteProgressRect.set(getMeasuredWidth() - AndroidUtilities.dp(30), AndroidUtilities.dp(2), getMeasuredWidth() - AndroidUtilities.dp(2), AndroidUtilities.dp(30));
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            if (currentMessageObject == null || currentMessageObject.messageOwner.destroyTime == 0) {
+                return;
+            }
+
+            if (drawable != null) {
+                drawable.setBounds(getMeasuredWidth() - AndroidUtilities.dp(32), 0, getMeasuredWidth(), AndroidUtilities.dp(32));
+                drawable.draw(canvas);
+            }
+
+            long msTime = System.currentTimeMillis() + ConnectionsManager.getInstance().getTimeDifference() * 1000;
+            float progress = Math.max(0, (long) currentMessageObject.messageOwner.destroyTime * 1000 - msTime) / (currentMessageObject.messageOwner.ttl * 1000.0f);
+            canvas.drawArc(deleteProgressRect, -90, -360 * progress, true, deleteProgressPaint);
+            if (progress != 0) {
+                int offset = AndroidUtilities.dp(2);
+                invalidate((int) deleteProgressRect.left - offset, (int) deleteProgressRect.top - offset, (int) deleteProgressRect.right + offset * 2, (int) deleteProgressRect.bottom + offset * 2);
+            }
+            updateSecretTimeText();
+
+            if (infoLayout != null) {
+                canvas.save();
+                canvas.translate(getMeasuredWidth() - AndroidUtilities.dp(38) - infoWidth, AndroidUtilities.dp(7));
+                infoLayout.draw(canvas);
+                canvas.restore();
+            }
+        }
     }
 }

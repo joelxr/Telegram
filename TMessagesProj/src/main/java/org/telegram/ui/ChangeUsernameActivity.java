@@ -29,6 +29,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
@@ -37,7 +38,6 @@ import org.telegram.android.NotificationCenter;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.R;
 import org.telegram.messenger.RPCRequest;
 import org.telegram.messenger.TLObject;
 import org.telegram.messenger.TLRPC;
@@ -50,6 +50,7 @@ import java.util.ArrayList;
 
 public class ChangeUsernameActivity extends BaseFragment {
 
+    private final static int done_button = 1;
     private EditText firstNameField;
     private View doneButton;
     private TextView checkTextView;
@@ -57,8 +58,6 @@ public class ChangeUsernameActivity extends BaseFragment {
     private String lastCheckName = null;
     private Runnable checkRunnable = null;
     private boolean lastNameAvailable = false;
-
-    private final static int done_button = 1;
 
     @Override
     public View createView(LayoutInflater inflater, ViewGroup container) {
@@ -120,7 +119,7 @@ public class ChangeUsernameActivity extends BaseFragment {
             });
 
             ((LinearLayout) fragmentView).addView(firstNameField);
-            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams)firstNameField.getLayoutParams();
+            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) firstNameField.getLayoutParams();
             layoutParams.topMargin = AndroidUtilities.dp(24);
             layoutParams.height = AndroidUtilities.dp(36);
             layoutParams.leftMargin = AndroidUtilities.dp(24);
@@ -137,7 +136,7 @@ public class ChangeUsernameActivity extends BaseFragment {
             checkTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
             checkTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
             ((LinearLayout) fragmentView).addView(checkTextView);
-            layoutParams = (LinearLayout.LayoutParams)checkTextView.getLayoutParams();
+            layoutParams = (LinearLayout.LayoutParams) checkTextView.getLayoutParams();
             layoutParams.topMargin = AndroidUtilities.dp(12);
             layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT;
             layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
@@ -152,7 +151,7 @@ public class ChangeUsernameActivity extends BaseFragment {
             helpTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
             helpTextView.setText(Html.fromHtml(LocaleController.getString("UsernameHelp", R.string.UsernameHelp)));
             ((LinearLayout) fragmentView).addView(helpTextView);
-            layoutParams = (LinearLayout.LayoutParams)helpTextView.getLayoutParams();
+            layoutParams = (LinearLayout.LayoutParams) helpTextView.getLayoutParams();
             layoutParams.topMargin = AndroidUtilities.dp(10);
             layoutParams.width = LinearLayout.LayoutParams.WRAP_CONTENT;
             layoutParams.height = LinearLayout.LayoutParams.WRAP_CONTENT;
@@ -180,7 +179,7 @@ public class ChangeUsernameActivity extends BaseFragment {
 
             checkTextView.setVisibility(View.GONE);
         } else {
-            ViewGroup parent = (ViewGroup)fragmentView.getParent();
+            ViewGroup parent = (ViewGroup) fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -362,7 +361,7 @@ public class ChangeUsernameActivity extends BaseFragment {
             @Override
             public void run(TLObject response, final TLRPC.TL_error error) {
                 if (error == null) {
-                    final TLRPC.User user = (TLRPC.User)response;
+                    final TLRPC.User user = (TLRPC.User) response;
                     AndroidUtilities.runOnUIThread(new Runnable() {
                         @Override
                         public void run() {

@@ -22,30 +22,25 @@ import android.text.TextUtils;
 import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ImageLoader;
+import org.telegram.android.ImageReceiver;
 import org.telegram.android.LocaleController;
-import org.telegram.messenger.ConnectionsManager;
-import org.telegram.messenger.FileLoader;
 import org.telegram.android.MediaController;
-import org.telegram.messenger.R;
-import org.telegram.messenger.Utilities;
 import org.telegram.android.MessageObject;
 import org.telegram.android.PhotoObject;
+import org.telegram.messenger.ConnectionsManager;
+import org.telegram.messenger.FileLoader;
+import org.telegram.messenger.Utilities;
+import org.telegram.ui.Components.GifDrawable;
 import org.telegram.ui.Components.RadialProgress;
 import org.telegram.ui.PhotoViewer;
-import org.telegram.ui.Components.GifDrawable;
-import org.telegram.android.ImageReceiver;
 
 import java.io.File;
 import java.util.Locale;
 
 public class ChatMediaCell extends ChatBaseCell implements MediaController.FileDownloadProgressListener {
-
-    public static interface ChatMediaCellDelegate {
-        public abstract void didClickedImage(ChatMediaCell cell);
-        public abstract void didPressedOther(ChatMediaCell cell);
-    }
 
     private static Drawable placeholderDocInDrawable;
     private static Drawable placeholderDocOutDrawable;
@@ -59,10 +54,8 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
     private static TextPaint namePaint;
     private static Paint docBackPaint;
     private static Paint deleteProgressPaint;
-
     private GifDrawable gifDrawable = null;
     private RadialProgress radialProgress;
-
     private int photoWidth;
     private int photoHeight;
     private PhotoObject currentPhotoObject;
@@ -72,30 +65,23 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
     private ImageReceiver photoImage;
     private boolean photoNotSet = false;
     private boolean cancelLoading = false;
-
     private boolean allowedToSetPhoto = true;
-
     private int TAG;
-
     private int buttonState = 0;
     private int buttonPressed = 0;
     private boolean imagePressed = false;
     private boolean otherPressed = false;
     private int buttonX;
     private int buttonY;
-
     private StaticLayout infoLayout;
     private int infoWidth;
     private int infoOffset = 0;
     private String currentInfoString;
-
     private StaticLayout nameLayout;
     private int nameWidth = 0;
     private String currentNameString;
-
     private ChatMediaCellDelegate mediaDelegate = null;
     private RectF deleteProgressRect = new RectF();
-
     public ChatMediaCell(Context context) {
         super(context);
 
@@ -395,7 +381,7 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
             }
             double lat = object.messageOwner.media.geo.lat;
             double lon = object.messageOwner.media.geo._long;
-            String url = String.format(Locale.US, "https://maps.googleapis.com/maps/api/staticmap?center=%f,%f&zoom=13&size=100x100&maptype=roadmap&scale=%d&markers=color:red|size:big|%f,%f&sensor=false", lat, lon, Math.min(2, (int)Math.ceil(AndroidUtilities.density)), lat, lon);
+            String url = String.format(Locale.US, "https://maps.googleapis.com/maps/api/staticmap?center=%f,%f&zoom=13&size=100x100&maptype=roadmap&scale=%d&markers=color:red|size:big|%f,%f&sensor=false", lat, lon, Math.min(2, (int) Math.ceil(AndroidUtilities.density)), lat, lon);
             if (!url.equals(currentUrl)) {
                 return true;
             }
@@ -509,7 +495,7 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
                         photoImage.setImage(currentPhotoObject.photoOwner.location, currentPhotoFilter, null, 0, false);
                     }
                 } else {
-                    photoImage.setImageBitmap((BitmapDrawable)null);
+                    photoImage.setImageBitmap((BitmapDrawable) null);
                 }
             } else if (messageObject.type == 4) {
                 photoWidth = AndroidUtilities.dp(100);
@@ -518,7 +504,7 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
 
                 double lat = messageObject.messageOwner.media.geo.lat;
                 double lon = messageObject.messageOwner.media.geo._long;
-                currentUrl = String.format(Locale.US, "https://maps.googleapis.com/maps/api/staticmap?center=%f,%f&zoom=13&size=100x100&maptype=roadmap&scale=%d&markers=color:red|size:big|%f,%f&sensor=false", lat, lon, Math.min(2, (int)Math.ceil(AndroidUtilities.density)), lat, lon);
+                currentUrl = String.format(Locale.US, "https://maps.googleapis.com/maps/api/staticmap?center=%f,%f&zoom=13&size=100x100&maptype=roadmap&scale=%d&markers=color:red|size:big|%f,%f&sensor=false", lat, lon, Math.min(2, (int) Math.ceil(AndroidUtilities.density)), lat, lon);
                 photoImage.setImage(currentUrl, null, null);
             } else {
                 if (AndroidUtilities.isTablet()) {
@@ -629,7 +615,7 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
                         }
                     }
                 } else {
-                    photoImage.setImageBitmap((Bitmap)null);
+                    photoImage.setImageBitmap((Bitmap) null);
                 }
             }
             photoImage.setForcePreview(messageObject.isSecretPhoto());
@@ -745,8 +731,8 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
         }
         photoImage.setImageCoords(x, AndroidUtilities.dp(7), photoWidth, photoHeight);
         int size = AndroidUtilities.dp(48);
-        buttonX = (int)(x + (photoWidth - size) / 2.0f);
-        buttonY = (int)(AndroidUtilities.dp(7) + (photoHeight - size) / 2.0f);
+        buttonX = (int) (x + (photoWidth - size) / 2.0f);
+        buttonY = (int) (AndroidUtilities.dp(7) + (photoHeight - size) / 2.0f);
 
         radialProgress.setProgressRect(buttonX, buttonY, buttonX + AndroidUtilities.dp(48), buttonY + AndroidUtilities.dp(48));
         deleteProgressRect.set(buttonX + AndroidUtilities.dp(3), buttonY + AndroidUtilities.dp(3), buttonX + AndroidUtilities.dp(45), buttonY + AndroidUtilities.dp(45));
@@ -763,7 +749,7 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
         if (currentInfoString == null || !currentInfoString.equals(str)) {
             currentInfoString = str;
             infoOffset = 0;
-            infoWidth = (int)Math.ceil(infoPaint.measureText(currentInfoString));
+            infoWidth = (int) Math.ceil(infoPaint.measureText(currentInfoString));
             CharSequence str2 = TextUtils.ellipsize(currentInfoString, infoPaint, infoWidth, TextUtils.TruncateAt.END);
             infoLayout = new StaticLayout(str2, infoPaint, infoWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
             invalidate();
@@ -861,11 +847,11 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
             buttonStatesDrawables[drawable].draw(canvas);
             if (!currentMessageObject.isOut() && currentMessageObject.messageOwner.destroyTime != 0) {
                 long msTime = System.currentTimeMillis() + ConnectionsManager.getInstance().getTimeDifference() * 1000;
-                float progress = Math.max(0, (long)currentMessageObject.messageOwner.destroyTime * 1000 - msTime) / (currentMessageObject.messageOwner.ttl * 1000.0f);
+                float progress = Math.max(0, (long) currentMessageObject.messageOwner.destroyTime * 1000 - msTime) / (currentMessageObject.messageOwner.ttl * 1000.0f);
                 canvas.drawArc(deleteProgressRect, -90, -360 * progress, true, deleteProgressPaint);
                 if (progress != 0) {
                     int offset = AndroidUtilities.dp(2);
-                    invalidate((int)deleteProgressRect.left - offset, (int)deleteProgressRect.top - offset, (int)deleteProgressRect.right + offset * 2, (int)deleteProgressRect.bottom + offset * 2);
+                    invalidate((int) deleteProgressRect.left - offset, (int) deleteProgressRect.top - offset, (int) deleteProgressRect.right + offset * 2, (int) deleteProgressRect.bottom + offset * 2);
                 }
                 updateSecretTimeText();
             }
@@ -937,5 +923,11 @@ public class ChatMediaCell extends ChatBaseCell implements MediaController.FileD
     @Override
     public int getObserverTag() {
         return TAG;
+    }
+
+    public static interface ChatMediaCellDelegate {
+        public abstract void didClickedImage(ChatMediaCell cell);
+
+        public abstract void didPressedOther(ChatMediaCell cell);
     }
 }

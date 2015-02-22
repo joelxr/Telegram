@@ -37,12 +37,49 @@ abstract class FormatCache<F extends Format> {
      * No date or no time.  Used in same parameters as DateFormat.SHORT or DateFormat.LONG
      */
     static final int NONE = -1;
-
-    private final ConcurrentMap<MultipartKey, F> cInstanceCache
+ private static final ConcurrentMap<MultipartKey, String> cDateTimeInstanceCache
+            = new ConcurrentHashMap<MultipartKey, String>(7);
+ private final ConcurrentMap<MultipartKey, F> cInstanceCache
             = new ConcurrentHashMap<MultipartKey, F>(7);
 
-    private static final ConcurrentMap<MultipartKey, String> cDateTimeInstanceCache
-            = new ConcurrentHashMap<MultipartKey, String>(7);
+    /**
+     * <p>Gets a date/time format for the specified styles and locale.</p>
+     *
+     * @param dateStyle date style: FULL, LONG, MEDIUM, or SHORT, null indicates no date in format
+     * @param timeStyle time style: FULL, LONG, MEDIUM, or SHORT, null indicates no time in format
+     * @param locale    The non-null locale of the desired format
+     * @return a localized standard date/time format
+     * @throws IllegalArgumentException if the Locale has no date/time pattern defined
+     */
+    // package protected, for access from test code; do not make public or protected
+    static String getPatternForStyle(final Integer dateStyle, final Integer timeStyle, final Locale locale) {
+        final MultipartKey key = new MultipartKey(dateStyle, timeStyle, locale);
+
+        String pattern = cDateTimeInstanceCache.get(key);
+        if (pattern == null) {
+            try {
+                DateFormat formatter;
+                if (dateStyle == null) {
+                    formatter = DateFormat.getTimeInstance(timeStyle.intValue(), locale);
+                } else if (timeStyle == null) {
+                    formatter = DateFormat.getDateInstance(dateStyle.intValue(), locale);
+                } else {
+                    formatter = DateFormat.getDateTimeInstance(dateStyle.intValue(), timeStyle.intValue(), locale);
+                }
+                pattern = ((SimpleDateFormat) formatter).toPattern();
+                final String previous = cDateTimeInstanceCache.putIfAbsent(key, pattern);
+                if (previous != null) {
+                    // even though it doesn't matter if another thread put the pattern
+                    // it's still good practice to return the String instance that is
+                    // actually in the ConcurrentMap
+                    pattern = previous;
+                }
+            } catch (final ClassCastException ex) {
+                throw new IllegalArgumentException("No date time pattern for locale: " + locale);
+            }
+        }
+        return pattern;
+    }
 
     /**
      * <p>Gets a formatter instance using the default pattern in the
@@ -88,7 +125,7 @@ abstract class FormatCache<F extends Format> {
             }
         }
         return format;
-    }
+    ;
 
     /**
      * <p>Create a format instance using the specified pattern, time zone
@@ -101,7 +138,7 @@ abstract class FormatCache<F extends Format> {
      * @throws IllegalArgumentException if pattern is invalid
      *                                  or <code>null</code>
      */
-    abstract protected F createInstance(String pattern, TimeZone timeZone, Locale locale);
+    abstract protected F createInstance(String pattern, TimeZone timeZone, Locale locale)}
 
     /**
      * <p>Gets a date/time formatter instance using the specified style,
@@ -116,7 +153,7 @@ abstract class FormatCache<F extends Format> {
      * @throws IllegalArgumentException if the Locale has no date/time
      *                                  pattern defined
      */
-    // This must remain private, see LANG-884 
+    // This must remain private, see LANG-884
     private F getDateTimeInstance(final Integer dateStyle, final Integer timeStyle, final TimeZone timeZone, Locale locale) {
         if (locale == null) {
             locale = Locale.getDefault();
@@ -175,45 +212,6 @@ abstract class FormatCache<F extends Format> {
     // package protected, for access from FastDateFormat; do not make public or protected
     F getTimeInstance(final int timeStyle, final TimeZone timeZone, Locale locale) {
         return getDateTimeInstance(null, Integer.valueOf(timeStyle), timeZone, locale);
-    }
-
-    /**
-     * <p>Gets a date/time format for the specified styles and locale.</p>
-     *
-     * @param dateStyle date style: FULL, LONG, MEDIUM, or SHORT, null indicates no date in format
-     * @param timeStyle time style: FULL, LONG, MEDIUM, or SHORT, null indicates no time in format
-     * @param locale    The non-null locale of the desired format
-     * @return a localized standard date/time format
-     * @throws IllegalArgumentException if the Locale has no date/time pattern defined
-     */
-    // package protected, for access from test code; do not make public or protected
-    static String getPatternForStyle(final Integer dateStyle, final Integer timeStyle, final Locale locale) {
-        final MultipartKey key = new MultipartKey(dateStyle, timeStyle, locale);
-
-        String pattern = cDateTimeInstanceCache.get(key);
-        if (pattern == null) {
-            try {
-                DateFormat formatter;
-                if (dateStyle == null) {
-                    formatter = DateFormat.getTimeInstance(timeStyle.intValue(), locale);
-                } else if (timeStyle == null) {
-                    formatter = DateFormat.getDateInstance(dateStyle.intValue(), locale);
-                } else {
-                    formatter = DateFormat.getDateTimeInstance(dateStyle.intValue(), timeStyle.intValue(), locale);
-                }
-                pattern = ((SimpleDateFormat) formatter).toPattern();
-                final String previous = cDateTimeInstanceCache.putIfAbsent(key, pattern);
-                if (previous != null) {
-                    // even though it doesn't matter if another thread put the pattern
-                    // it's still good practice to return the String instance that is
-                    // actually in the ConcurrentMap
-                    pattern = previous;
-                }
-            } catch (final ClassCastException ex) {
-                throw new IllegalArgumentException("No date time pattern for locale: " + locale);
-            }
-        }
-        return pattern;
     }
 
     // ----------------------------------------------------------------------

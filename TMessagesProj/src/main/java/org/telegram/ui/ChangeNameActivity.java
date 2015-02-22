@@ -23,16 +23,16 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
-import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.TLObject;
-import org.telegram.messenger.TLRPC;
-import org.telegram.messenger.ConnectionsManager;
 import org.telegram.android.MessagesController;
 import org.telegram.android.NotificationCenter;
-import org.telegram.messenger.R;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.RPCRequest;
+import org.telegram.messenger.TLObject;
+import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
@@ -40,12 +40,11 @@ import org.telegram.ui.ActionBar.BaseFragment;
 
 public class ChangeNameActivity extends BaseFragment {
 
+    private final static int done_button = 1;
     private EditText firstNameField;
     private EditText lastNameField;
     private View headerLabelView;
     private View doneButton;
-
-    private final static int done_button = 1;
 
     @Override
     public View createView(LayoutInflater inflater, ViewGroup container) {
@@ -98,7 +97,7 @@ public class ChangeNameActivity extends BaseFragment {
             firstNameField.setHint(LocaleController.getString("FirstName", R.string.FirstName));
             AndroidUtilities.clearCursorDrawable(firstNameField);
             ((LinearLayout) fragmentView).addView(firstNameField);
-            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams)firstNameField.getLayoutParams();
+            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) firstNameField.getLayoutParams();
             layoutParams.topMargin = AndroidUtilities.dp(24);
             layoutParams.height = AndroidUtilities.dp(36);
             layoutParams.leftMargin = AndroidUtilities.dp(24);
@@ -130,7 +129,7 @@ public class ChangeNameActivity extends BaseFragment {
             lastNameField.setHint(LocaleController.getString("LastName", R.string.LastName));
             AndroidUtilities.clearCursorDrawable(lastNameField);
             ((LinearLayout) fragmentView).addView(lastNameField);
-            layoutParams = (LinearLayout.LayoutParams)lastNameField.getLayoutParams();
+            layoutParams = (LinearLayout.LayoutParams) lastNameField.getLayoutParams();
             layoutParams.topMargin = AndroidUtilities.dp(16);
             layoutParams.height = AndroidUtilities.dp(36);
             layoutParams.leftMargin = AndroidUtilities.dp(24);
@@ -154,7 +153,7 @@ public class ChangeNameActivity extends BaseFragment {
                 lastNameField.setText(user.last_name);
             }
         } else {
-            ViewGroup parent = (ViewGroup)fragmentView.getParent();
+            ViewGroup parent = (ViewGroup) fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
