@@ -203,6 +203,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private final static int delete_chat = 12;
     private final static int share_contact = 13;
 
+    /** AwesomeMix */
+    private final static int attach_song = 14;
+
     AdapterView.OnItemLongClickListener onItemLongClickListener = new AdapterView.OnItemLongClickListener() {
         @Override
         public boolean onItemLongClick(AdapterView<?> adapter, View view, int position, long id) {
@@ -724,6 +727,19 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             showAlertDialog(builder);
                         }
                     }
+                    //TODO: attach a song
+                    else if (id == attach_song) {
+                        SongSelectActivity fragment = new SongSelectActivity();
+                        fragment.setDelegate(new SongSelectActivity.SongSelectActivityDelegate() {
+                            @Override
+                            public void didSelectSong(SongSelectActivity activity, String song) {
+                                activity.finishFragment();
+                                SendMessagesHelper.getInstance().sendMessage(song, 1);
+                            }
+                        });
+
+                        presentFragment(fragment);
+                    }
                 }
             });
 
@@ -870,6 +886,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             headerItem.setLayoutParams(layoutParams);
 
             attachItem = menu.addItem(chat_menu_attach, R.drawable.ic_ab_other);
+            attachItem.addSubItem(attach_song, LocaleController.getString("ChatShareSong", R.string.ChatShareSong), R.drawable.ic_attach_song);
             attachItem.addSubItem(attach_photo, LocaleController.getString("ChatTakePhoto", R.string.ChatTakePhoto), R.drawable.ic_attach_photo);
             attachItem.addSubItem(attach_gallery, LocaleController.getString("ChatGallery", R.string.ChatGallery), R.drawable.ic_attach_gallery);
             attachItem.addSubItem(attach_video, LocaleController.getString("ChatVideo", R.string.ChatVideo), R.drawable.ic_attach_video);
@@ -878,6 +895,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             attachItem.setVisibility(View.INVISIBLE);
 
             menuItem = menu.addItem(chat_menu_attach, R.drawable.ic_ab_attach);
+            menuItem.addSubItem(attach_song, LocaleController.getString("ChatShareSong", R.string.ChatShareSong), R.drawable.ic_attach_song);
             menuItem.addSubItem(attach_photo, LocaleController.getString("ChatTakePhoto", R.string.ChatTakePhoto), R.drawable.ic_attach_photo);
             menuItem.addSubItem(attach_gallery, LocaleController.getString("ChatGallery", R.string.ChatGallery), R.drawable.ic_attach_gallery);
             menuItem.addSubItem(attach_video, LocaleController.getString("ChatVideo", R.string.ChatVideo), R.drawable.ic_attach_video);

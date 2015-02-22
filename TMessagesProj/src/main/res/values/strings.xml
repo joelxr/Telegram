@@ -60,6 +60,7 @@
     <string name="KickFromBroadcast">Remove from broadcast list</string>
     <!--documents view-->
     <string name="SelectFile">Select File</string>
+    <string name="SelectSong">Select Song</string>
     <string name="FreeOfTotal">Free %1$s of %2$s</string>
     <string name="UnknownError">Unknown error</string>
     <string name="AccessError">Access error</string>
@@ -78,6 +79,8 @@
     <string name="IsTyping">is typing...</string>
     <string name="AreTyping">are typing...</string>
     <string name="GotAQuestion">Got a question\nabout Telegram?</string>
+    <!-- share a song -->
+    <string name="ChatShareSong">Share a song</string>
     <string name="ChatTakePhoto">Take photo</string>
     <string name="ChatGallery">Gallery</string>
     <string name="ChatLocation">Location</string>
