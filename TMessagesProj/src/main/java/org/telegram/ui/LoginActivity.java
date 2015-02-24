@@ -36,22 +36,15 @@ import android.view.WindowManager;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.spotify.sdk.android.authentication.AuthenticationClient;
-import com.spotify.sdk.android.authentication.AuthenticationRequest;
-import com.spotify.sdk.android.authentication.AuthenticationResponse;
-
 import org.telegram.PhoneFormat.PhoneFormat;
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
-import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
 import org.telegram.android.MessagesStorage;
 import org.telegram.android.NotificationCenter;
@@ -59,6 +52,8 @@ import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLog;
+import org.telegram.android.LocaleController;
+import org.telegram.R;
 import org.telegram.messenger.RPCRequest;
 import org.telegram.messenger.TLObject;
 import org.telegram.messenger.TLRPC;
@@ -83,10 +78,11 @@ import java.util.TimerTask;
 
 public class LoginActivity extends BaseFragment {
 
-    private final static int done_button = 1;
     private int currentViewNum = 0;
-    private SlideView[] views = new SlideView[4];
+    private SlideView[] views = new SlideView[3];
     private ProgressDialog progressDialog;
+
+    private final static int done_button = 1;
 
     @Override
     public void onFragmentDestroy() {
@@ -188,7 +184,7 @@ public class LoginActivity extends BaseFragment {
                     FrameLayout parent = (FrameLayout) ((ScrollView) fragmentView).getChildAt(0);
                     for (int a = 0; a < views.length; a++) {
                         if (views[a] == null) {
-                            views[a] = (SlideView) parent.getChildAt(a);
+                            views[a] = (SlideView)parent.getChildAt(a);
                         }
                     }
                 }
@@ -202,20 +198,17 @@ public class LoginActivity extends BaseFragment {
             if (savedInstanceState != null) {
                 currentViewNum = savedInstanceState.getInt("currentViewNum", 0);
             }
-
             for (int a = 0; a < views.length; a++) {
                 SlideView v = views[a];
                 if (v != null) {
                     if (savedInstanceState != null) {
                         v.restoreStateParams(savedInstanceState);
                     }
-
                     v.setVisibility(currentViewNum == a ? View.VISIBLE : View.GONE);
                 }
             }
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
-
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -298,7 +291,7 @@ public class LoginActivity extends BaseFragment {
                     editor.putInt(key, (Integer) obj);
                 }
             } else if (obj instanceof Bundle) {
-                putBundleToEditor((Bundle) obj, editor, key);
+                putBundleToEditor((Bundle)obj, editor, key);
             }
         }
     }
@@ -354,7 +347,7 @@ public class LoginActivity extends BaseFragment {
     }
 
     public void setPage(int page, boolean animated, Bundle params, boolean back) {
-        if (android.os.Build.VERSION.SDK_INT > 13) {
+        if(android.os.Build.VERSION.SDK_INT > 13) {
             final SlideView outView = views[currentViewNum];
             final SlideView newView = views[page];
             currentViewNum = page;
@@ -630,7 +623,7 @@ public class LoginActivity extends BaseFragment {
                             int toDelete = 0;
                             for (int a = start; a >= 0; a--) {
                                 substr = str.substring(a, a + 1);
-                                if (phoneChars.contains(substr)) {
+                                if(phoneChars.contains(substr)) {
                                     break;
                                 }
                                 toDelete++;
@@ -714,7 +707,7 @@ public class LoginActivity extends BaseFragment {
             String country = null;
 
             try {
-                TelephonyManager telephonyManager = (TelephonyManager) ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
+                TelephonyManager telephonyManager = (TelephonyManager)ApplicationLoader.applicationContext.getSystemService(Context.TELEPHONY_SERVICE);
                 if (telephonyManager != null) {
                     country = telephonyManager.getSimCountryIso().toUpperCase();
                 }
@@ -841,7 +834,7 @@ public class LoginActivity extends BaseFragment {
                         public void run() {
                             nextPressed = false;
                             if (error == null) {
-                                final TLRPC.TL_auth_sentCode res = (TLRPC.TL_auth_sentCode) response;
+                                final TLRPC.TL_auth_sentCode res = (TLRPC.TL_auth_sentCode)response;
                                 params.putString("phoneHash", res.phone_code_hash);
                                 params.putInt("calltime", res.send_call_timeout * 1000);
                                 if (res.phone_registered) {
@@ -911,7 +904,6 @@ public class LoginActivity extends BaseFragment {
 
     public class LoginActivitySmsView extends SlideView implements NotificationCenter.NotificationCenterDelegate {
 
-        private final Object timerSync = new Object();
         private String phoneHash;
         private String requestPhone;
         private String registered;
@@ -920,8 +912,10 @@ public class LoginActivity extends BaseFragment {
         private TextView timeText;
         private TextView problemText;
         private Bundle currentParams;
+
         private Timer timeTimer;
         private Timer codeTimer;
+        private final Object timerSync = new Object();
         private volatile int time = 60000;
         private volatile int codeTime = 15000;
         private double lastCurrentTime;
@@ -1142,7 +1136,7 @@ public class LoginActivity extends BaseFragment {
 
         private void destroyCodeTimer() {
             try {
-                synchronized (timerSync) {
+                synchronized(timerSync) {
                     if (codeTimer != null) {
                         codeTimer.cancel();
                         codeTimer = null;
@@ -1201,7 +1195,7 @@ public class LoginActivity extends BaseFragment {
 
         private void destroyTimer() {
             try {
-                synchronized (timerSync) {
+                synchronized(timerSync) {
                     if (timeTimer != null) {
                         timeTimer.cancel();
                         timeTimer = null;
@@ -1236,7 +1230,7 @@ public class LoginActivity extends BaseFragment {
                             needHideProgress();
                             nextPressed = false;
                             if (error == null) {
-                                TLRPC.TL_auth_authorization res = (TLRPC.TL_auth_authorization) response;
+                                TLRPC.TL_auth_authorization res = (TLRPC.TL_auth_authorization)response;
                                 destroyTimer();
                                 destroyCodeTimer();
                                 UserConfig.clearConfig();

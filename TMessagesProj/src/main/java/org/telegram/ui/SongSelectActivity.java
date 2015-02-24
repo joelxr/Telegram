@@ -20,8 +20,13 @@ import org.telegram.ui.Adapters.SongAdapter;
 
 public class SongSelectActivity extends BaseFragment {
 
+    public static abstract interface SongSelectActivityDelegate {
+        public void didSelectSong(SongSelectActivity activity, String song);
+    }
+
     private static final String CLIENT_ID = "f14ccf1b7c0648cb85350639b299ef57";
     private static final String REDIRECT_URI = "amix://callback";
+
     private SongSelectActivityDelegate delegate;
     private TextView emptyView;
     private ListView listView;
@@ -94,9 +99,5 @@ public class SongSelectActivity extends BaseFragment {
         }
 
         return fragmentView;
-    }
-
-    public static abstract interface SongSelectActivityDelegate {
-        public void didSelectSong(SongSelectActivity activity, String song);
     }
 }
