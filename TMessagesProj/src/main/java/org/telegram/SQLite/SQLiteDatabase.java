@@ -8,76 +8,76 @@
 
 package org.telegram.SQLite;
 
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.ApplicationLoader;
 
 public class SQLiteDatabase {
-    private final int sqliteHandle;
+	private final int sqliteHandle;
 
-    private boolean isOpen = false;
+	private boolean isOpen = false;
     private boolean inTransaction = false;
-    private StackTraceElement[] temp;
 
-    public SQLiteDatabase(String fileName) throws SQLiteException {
-        sqliteHandle = opendb(fileName, ApplicationLoader.applicationContext.getFilesDir().getPath());
-        isOpen = true;
-    }
+	public int getSQLiteHandle() {
+		return sqliteHandle;
+	}
 
-    public int getSQLiteHandle() {
-        return sqliteHandle;
-    }
+	public SQLiteDatabase(String fileName) throws SQLiteException {
+		sqliteHandle = opendb(fileName, ApplicationLoader.applicationContext.getFilesDir().getPath());
+		isOpen = true;
+	}
 
-    public boolean tableExists(String tableName) throws SQLiteException {
-        checkOpened();
-        String s = "SELECT rowid FROM sqlite_master WHERE type='table' AND name=?;";
-        return executeInt(s, tableName) != null;
-    }
+	public boolean tableExists(String tableName) throws SQLiteException {
+		checkOpened();
+		String s = "SELECT rowid FROM sqlite_master WHERE type='table' AND name=?;";
+		return executeInt(s, tableName) != null;
+	}
 
     public SQLitePreparedStatement executeFast(String sql) throws SQLiteException {
         return new SQLitePreparedStatement(this, sql, true);
     }
 
-    public Integer executeInt(String sql, Object... args) throws SQLiteException {
-        checkOpened();
-        SQLiteCursor cursor = queryFinalized(sql, args);
-        try {
-            if (!cursor.next()) {
-                return null;
-            }
-            return cursor.intValue(0);
-        } finally {
-            cursor.dispose();
-        }
-    }
+	public Integer executeInt(String sql, Object... args) throws SQLiteException {
+		checkOpened();
+		SQLiteCursor cursor = queryFinalized(sql, args);
+		try {
+			if (!cursor.next()) {
+				return null;
+			}
+			return cursor.intValue(0);
+		} finally {
+			cursor.dispose();
+		}
+	}
 
-    public SQLiteCursor queryFinalized(String sql, Object... args) throws SQLiteException {
-        checkOpened();
-        return new SQLitePreparedStatement(this, sql, true).query(args);
-    }
+	public SQLiteCursor queryFinalized(String sql, Object... args) throws SQLiteException {
+		checkOpened();
+		return new SQLitePreparedStatement(this, sql, true).query(args);
+	}
 
-    public void close() {
-        if (isOpen) {
-            try {
+	public void close() {
+		if (isOpen) {
+			try {
                 commitTransaction();
-                closedb(sqliteHandle);
-            } catch (SQLiteException e) {
+				closedb(sqliteHandle);
+			} catch (SQLiteException e) {
                 FileLog.e("tmessages", e.getMessage(), e);
-            }
-            isOpen = false;
-        }
-    }
+			}
+			isOpen = false;
+		}
+	}
 
-    void checkOpened() throws SQLiteException {
-        if (!isOpen) {
-            throw new SQLiteException("Database closed");
-        }
-    }
+	void checkOpened() throws SQLiteException {
+		if (!isOpen) {
+			throw new SQLiteException("Database closed");
+		}
+	}
 
-    public void finalize() throws Throwable {
+	public void finalize() throws Throwable {
         super.finalize();
-        close();
-    }
+		close();
+	}
 
+    private StackTraceElement[] temp;
     public void beginTransaction() throws SQLiteException {
         if (inTransaction) {
             throw new SQLiteException("database already in transaction");
@@ -94,11 +94,8 @@ public class SQLiteDatabase {
         commitTransaction(sqliteHandle);
     }
 
-    native int opendb(String fileName, String tempDir) throws SQLiteException;
-
-    native void closedb(int sqliteHandle) throws SQLiteException;
-
+	native int opendb(String fileName, String tempDir) throws SQLiteException;
+	native void closedb(int sqliteHandle) throws SQLiteException;
     native void beginTransaction(int sqliteHandle);
-
     native void commitTransaction(int sqliteHandle);
 }

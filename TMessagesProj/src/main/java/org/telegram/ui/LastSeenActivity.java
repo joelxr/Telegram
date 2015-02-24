@@ -27,7 +27,6 @@ import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
 import org.telegram.android.LocaleController;
@@ -36,6 +35,7 @@ import org.telegram.android.NotificationCenter;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLog;
+import org.telegram.R;
 import org.telegram.messenger.RPCRequest;
 import org.telegram.messenger.TLObject;
 import org.telegram.messenger.TLRPC;
@@ -51,12 +51,13 @@ import java.util.ArrayList;
 
 public class LastSeenActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
-    private final static int done_button = 1;
     private ListAdapter listAdapter;
     private View doneButton;
+
     private int currentType = 0;
     private ArrayList<Integer> currentPlus;
     private ArrayList<Integer> currentMinus;
+
     private int lastSeenSectionRow;
     private int everybodyRow;
     private int myContactsRow;
@@ -67,6 +68,20 @@ public class LastSeenActivity extends BaseFragment implements NotificationCenter
     private int neverShareRow;
     private int shareDetailRow;
     private int rowCount;
+
+    private final static int done_button = 1;
+
+    private static class LinkMovementMethodMy extends LinkMovementMethod {
+        @Override
+        public boolean onTouchEvent(TextView widget, Spannable buffer, MotionEvent event) {
+            try {
+                return super.onTouchEvent(widget, buffer, event);
+            } catch (Exception e) {
+                FileLog.e("tmessages", e);
+            }
+            return false;
+        }
+    }
 
     @Override
     public boolean onFragmentCreate() {
@@ -380,18 +395,6 @@ public class LastSeenActivity extends BaseFragment implements NotificationCenter
         super.onResume();
         if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
-        }
-    }
-
-    private static class LinkMovementMethodMy extends LinkMovementMethod {
-        @Override
-        public boolean onTouchEvent(TextView widget, Spannable buffer, MotionEvent event) {
-            try {
-                return super.onTouchEvent(widget, buffer, event);
-            } catch (Exception e) {
-                FileLog.e("tmessages", e);
-            }
-            return false;
         }
     }
 

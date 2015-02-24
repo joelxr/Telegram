@@ -22,26 +22,32 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
+import org.telegram.R;
+import org.telegram.ui.Adapters.CountryAdapter;
+import org.telegram.ui.Adapters.CountryAdapter.Country;
+import org.telegram.ui.Adapters.CountrySearchAdapter;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.Adapters.CountryAdapter;
-import org.telegram.ui.Adapters.CountryAdapter.Country;
-import org.telegram.ui.Adapters.CountrySearchAdapter;
 import org.telegram.ui.Components.SectionsListView;
 
 public class CountrySelectActivity extends BaseFragment {
+
+    public static interface CountrySelectActivityDelegate {
+        public abstract void didSelectCountry(String name);
+    }
 
     private SectionsListView listView;
     private TextView emptyTextView;
     private CountryAdapter listViewAdapter;
     private CountrySearchAdapter searchListViewAdapter;
+
     private boolean searchWas;
     private boolean searching;
+
     private CountrySelectActivityDelegate delegate;
 
     @Override
@@ -101,7 +107,7 @@ public class CountrySelectActivity extends BaseFragment {
                         searchWas = true;
                         if (listView != null) {
                             listView.setAdapter(searchListViewAdapter);
-                            if (android.os.Build.VERSION.SDK_INT >= 11) {
+                            if(android.os.Build.VERSION.SDK_INT >= 11) {
                                 listView.setFastScrollAlwaysVisible(false);
                             }
                             listView.setFastScrollEnabled(false);
@@ -216,7 +222,7 @@ public class CountrySelectActivity extends BaseFragment {
                 }
             });
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -234,9 +240,5 @@ public class CountrySelectActivity extends BaseFragment {
 
     public void setCountrySelectActivityDelegate(CountrySelectActivityDelegate delegate) {
         this.delegate = delegate;
-    }
-
-    public static interface CountrySelectActivityDelegate {
-        public abstract void didSelectCountry(String name);
     }
 }

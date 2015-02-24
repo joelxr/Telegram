@@ -29,30 +29,9 @@ import java.util.WeakHashMap;
 
 public class View10 extends Animation {
 
-    private static final WeakHashMap<View, View10> PROXIES = new WeakHashMap<View, View10>();
     public static boolean NEED_PROXY = Build.VERSION.SDK_INT < 11;
-    private final WeakReference<View> mView;
-    private final Camera mCamera = new Camera();
-    private final RectF mBefore = new RectF();
-    private final RectF mAfter = new RectF();
-    private final Matrix mTempMatrix = new Matrix();
-    private boolean mHasPivot;
-    private float mAlpha = 1;
-    private float mPivotX;
-    private float mPivotY;
-    private float mRotationX;
-    private float mRotationY;
-    private float mRotationZ;
-    private float mScaleX = 1;
-    private float mScaleY = 1;
-    private float mTranslationX;
-    private float mTranslationY;
-    private View10(View view) {
-        setDuration(0);
-        setFillAfter(true);
-        view.setAnimation(this);
-        mView = new WeakReference<View>(view);
-    }
+
+    private static final WeakHashMap<View, View10> PROXIES = new WeakHashMap<View, View10>();
 
     public static View10 wrap(View view) {
         View10 proxy = PROXIES.get(view);
@@ -64,6 +43,32 @@ public class View10 extends Animation {
             view.setAnimation(proxy);
         }
         return proxy;
+    }
+
+    private final WeakReference<View> mView;
+    private final Camera mCamera = new Camera();
+    private boolean mHasPivot;
+
+    private float mAlpha = 1;
+    private float mPivotX;
+    private float mPivotY;
+    private float mRotationX;
+    private float mRotationY;
+    private float mRotationZ;
+    private float mScaleX = 1;
+    private float mScaleY = 1;
+    private float mTranslationX;
+    private float mTranslationY;
+
+    private final RectF mBefore = new RectF();
+    private final RectF mAfter = new RectF();
+    private final Matrix mTempMatrix = new Matrix();
+
+    private View10(View view) {
+        setDuration(0);
+        setFillAfter(true);
+        view.setAnimation(this);
+        mView = new WeakReference<View>(view);
     }
 
     public float getAlpha() {

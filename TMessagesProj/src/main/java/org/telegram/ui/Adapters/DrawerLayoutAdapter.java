@@ -13,14 +13,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 
-import org.telegram.R;
 import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
+import org.telegram.R;
 import org.telegram.messenger.UserConfig;
-import org.telegram.ui.Cells.DividerCell;
 import org.telegram.ui.Cells.DrawerActionCell;
-import org.telegram.ui.Cells.DrawerProfileCell;
+import org.telegram.ui.Cells.DividerCell;
 import org.telegram.ui.Cells.EmptyCell;
+import org.telegram.ui.Cells.DrawerProfileCell;
 
 public class DrawerLayoutAdapter extends BaseAdapter {
 

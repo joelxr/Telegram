@@ -30,32 +30,56 @@ import android.view.VelocityTracker;
 import android.view.ViewConfiguration;
 import android.widget.CompoundButton;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
+import org.telegram.R;
 import org.telegram.ui.AnimationCompat.ObjectAnimatorProxy;
 
 public class Switch extends CompoundButton {
 
+    public static class Insets {
+        public static final Insets NONE = new Insets(AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4), 0);
+
+        public final int left;
+        public final int top;
+        public final int right;
+        public final int bottom;
+
+        private Insets(int left, int top, int right, int bottom) {
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+        }
+    }
+
+    public static float constrain(float amount, float low, float high) {
+        return amount < low ? low : (amount > high ? high : amount);
+    }
+
     private static final int THUMB_ANIMATION_DURATION = 250;
+
     private static final int TOUCH_MODE_IDLE = 0;
     private static final int TOUCH_MODE_DOWN = 1;
     private static final int TOUCH_MODE_DRAGGING = 2;
-    private final Rect mTempRect = new Rect();
+
     private Drawable mThumbDrawable;
     private Drawable mTrackDrawable;
     private int mThumbTextPadding;
     private int mSwitchMinWidth;
     private int mSwitchPadding;
     private boolean mSplitTrack;
+
     private boolean attachedToWindow;
     private boolean wasLayout;
+
     private int mTouchMode;
     private int mTouchSlop;
     private float mTouchX;
     private float mTouchY;
     private VelocityTracker mVelocityTracker = VelocityTracker.obtain();
     private int mMinFlingVelocity;
+
     private float thumbPosition;
     private int mSwitchWidth;
     private int mSwitchHeight;
@@ -64,7 +88,10 @@ public class Switch extends CompoundButton {
     private int mSwitchTop;
     private int mSwitchRight;
     private int mSwitchBottom;
+
     private ObjectAnimatorProxy mPositionAnimator;
+
+    private final Rect mTempRect = new Rect();
 
     public Switch(Context context) {
         super(context);
@@ -95,21 +122,13 @@ public class Switch extends CompoundButton {
         setChecked(isChecked());
     }
 
-    public static float constrain(float amount, float low, float high) {
-        return amount < low ? low : (amount > high ? high : amount);
-    }
-
-    public int getSwitchPadding() {
-        return mSwitchPadding;
-    }
-
     public void setSwitchPadding(int pixels) {
         mSwitchPadding = pixels;
         requestLayout();
     }
 
-    public int getSwitchMinWidth() {
-        return mSwitchMinWidth;
+    public int getSwitchPadding() {
+        return mSwitchPadding;
     }
 
     public void setSwitchMinWidth(int pixels) {
@@ -117,8 +136,8 @@ public class Switch extends CompoundButton {
         requestLayout();
     }
 
-    public int getThumbTextPadding() {
-        return mThumbTextPadding;
+    public int getSwitchMinWidth() {
+        return mSwitchMinWidth;
     }
 
     public void setThumbTextPadding(int pixels) {
@@ -126,12 +145,8 @@ public class Switch extends CompoundButton {
         requestLayout();
     }
 
-    public void setTrackResource(int resId) {
-        setTrackDrawable(getContext().getDrawable(resId));
-    }
-
-    public Drawable getTrackDrawable() {
-        return mTrackDrawable;
+    public int getThumbTextPadding() {
+        return mThumbTextPadding;
     }
 
     public void setTrackDrawable(Drawable track) {
@@ -145,12 +160,12 @@ public class Switch extends CompoundButton {
         requestLayout();
     }
 
-    public void setThumbResource(int resId) {
-        setThumbDrawable(getContext().getDrawable(resId));
+    public void setTrackResource(int resId) {
+        setTrackDrawable(getContext().getDrawable(resId));
     }
 
-    public Drawable getThumbDrawable() {
-        return mThumbDrawable;
+    public Drawable getTrackDrawable() {
+        return mTrackDrawable;
     }
 
     public void setThumbDrawable(Drawable thumb) {
@@ -164,13 +179,21 @@ public class Switch extends CompoundButton {
         requestLayout();
     }
 
-    public boolean getSplitTrack() {
-        return mSplitTrack;
+    public void setThumbResource(int resId) {
+        setThumbDrawable(getContext().getDrawable(resId));
+    }
+
+    public Drawable getThumbDrawable() {
+        return mThumbDrawable;
     }
 
     public void setSplitTrack(boolean splitTrack) {
         mSplitTrack = splitTrack;
         invalidate();
+    }
+
+    public boolean getSplitTrack() {
+        return mSplitTrack;
     }
 
     @Override
@@ -350,13 +373,13 @@ public class Switch extends CompoundButton {
         return thumbPosition > 0.5f;
     }
 
-    public float getThumbPosition() {
-        return thumbPosition;
-    }
-
     private void setThumbPosition(float position) {
         thumbPosition = position;
         invalidate();
+    }
+
+    public float getThumbPosition() {
+        return thumbPosition;
     }
 
     @Override
@@ -605,6 +628,15 @@ public class Switch extends CompoundButton {
         }
     }
 
+    /*@Override
+    protected int[] onCreateDrawableState(int extraSpace) {
+        final int[] drawableState = super.onCreateDrawableState(extraSpace + 1);
+        if (isChecked()) {
+            mergeDrawableStates(drawableState, CHECKED_STATE_SET);
+        }
+        return drawableState;
+    }*/
+
     @Override
     protected void drawableStateChanged() {
         super.drawableStateChanged();
@@ -621,15 +653,6 @@ public class Switch extends CompoundButton {
 
         invalidate();
     }
-
-    /*@Override
-    protected int[] onCreateDrawableState(int extraSpace) {
-        final int[] drawableState = super.onCreateDrawableState(extraSpace + 1);
-        if (isChecked()) {
-            mergeDrawableStates(drawableState, CHECKED_STATE_SET);
-        }
-        return drawableState;
-    }*/
 
     @Override
     public void drawableHotspotChanged(float x, float y) {
@@ -664,22 +687,6 @@ public class Switch extends CompoundButton {
         if (mPositionAnimator != null && mPositionAnimator.isRunning()) {
             mPositionAnimator.end();
             mPositionAnimator = null;
-        }
-    }
-
-    public static class Insets {
-        public static final Insets NONE = new Insets(AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4), 0);
-
-        public final int left;
-        public final int top;
-        public final int right;
-        public final int bottom;
-
-        private Insets(int left, int top, int right, int bottom) {
-            this.left = left;
-            this.top = top;
-            this.right = right;
-            this.bottom = bottom;
         }
     }
 }

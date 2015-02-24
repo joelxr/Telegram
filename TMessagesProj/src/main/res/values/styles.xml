@@ -1,4 +1,5 @@
-<resources xmlns:android="http://schemas.android.com/apk/res/android">
+<resources
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--THEMES-->
 
@@ -33,7 +34,7 @@
 
     <!-- POPUP -->
 
-    <style name="PopupAnimation" mce_bogus="1" parent="android:Animation">
+    <style name="PopupAnimation" parent="android:Animation" mce_bogus="1">
         <item name="android:windowEnterAnimation">@anim/popup_in</item>
         <item name="android:windowExitAnimation">@anim/popup_out</item>
     </style>

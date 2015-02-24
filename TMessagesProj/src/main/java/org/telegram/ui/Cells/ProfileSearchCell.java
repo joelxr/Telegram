@@ -18,13 +18,13 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 
 import org.telegram.PhoneFormat.PhoneFormat;
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
 import org.telegram.android.ImageReceiver;
 import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
 import org.telegram.messenger.ConnectionsManager;
+import org.telegram.R;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.ui.Components.AvatarDrawable;
@@ -38,18 +38,23 @@ public class ProfileSearchCell extends BaseCell {
     private static Drawable broadcastDrawable;
     private static Drawable groupDrawable;
     private static Paint linePaint;
-    public boolean useSeparator = false;
-    public float drawAlpha = 1;
+
     private CharSequence currentName;
     private ImageReceiver avatarImage;
     private AvatarDrawable avatarDrawable;
     private CharSequence subLabel;
+
     private TLRPC.User user = null;
     private TLRPC.Chat chat = null;
     private TLRPC.EncryptedChat encryptedChat = null;
+
     private String lastName = null;
     private int lastStatus = 0;
     private TLRPC.FileLocation lastAvatar = null;
+
+    public boolean useSeparator = false;
+    public float drawAlpha = 1;
+
     private int nameLeft;
     private int nameTop;
     private StaticLayout nameLayout;
@@ -386,7 +391,7 @@ public class ProfileSearchCell extends BaseCell {
         }
 
         if (drawAlpha != 1) {
-            canvas.saveLayerAlpha(0, 0, canvas.getWidth(), canvas.getHeight(), (int) (255 * drawAlpha), Canvas.HAS_ALPHA_LAYER_SAVE_FLAG);
+            canvas.saveLayerAlpha(0, 0, canvas.getWidth(), canvas.getHeight(), (int)(255 * drawAlpha), Canvas.HAS_ALPHA_LAYER_SAVE_FLAG);
         }
 
         if (drawNameLock) {

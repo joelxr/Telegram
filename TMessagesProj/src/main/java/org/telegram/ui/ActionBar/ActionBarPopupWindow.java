@@ -27,7 +27,6 @@ import java.lang.reflect.Field;
 public class ActionBarPopupWindow extends PopupWindow {
 
     private static final Field superListenerField;
-
     static {
         Field f = null;
         try {
@@ -48,6 +47,39 @@ public class ActionBarPopupWindow extends PopupWindow {
 
     private ViewTreeObserver.OnScrollChangedListener mSuperScrollListener;
     private ViewTreeObserver mViewTreeObserver;
+
+    public static interface OnDispatchKeyEventListener {
+        public void onDispatchKeyEvent(KeyEvent keyEvent);
+    }
+
+    public static class ActionBarPopupWindowLayout extends LinearLayout {
+
+        private OnDispatchKeyEventListener mOnDispatchKeyEventListener;
+
+        public ActionBarPopupWindowLayout(Context context) {
+            super(context);
+        }
+
+        public ActionBarPopupWindowLayout(Context context, AttributeSet attrs) {
+            super(context, attrs);
+        }
+
+        public ActionBarPopupWindowLayout(Context context, AttributeSet attrs, int defStyle) {
+            super(context, attrs, defStyle);
+        }
+
+        public void setDispatchKeyEventListener(OnDispatchKeyEventListener listener) {
+            mOnDispatchKeyEventListener = listener;
+        }
+
+        @Override
+        public boolean dispatchKeyEvent(KeyEvent event) {
+            if (mOnDispatchKeyEventListener != null) {
+                mOnDispatchKeyEventListener.onDispatchKeyEvent(event);
+            }
+            return super.dispatchKeyEvent(event);
+        }
+    }
 
     public ActionBarPopupWindow() {
         super();
@@ -170,38 +202,5 @@ public class ActionBarPopupWindow extends PopupWindow {
         setFocusable(false);
         super.dismiss();
         unregisterListener();
-    }
-
-    public static interface OnDispatchKeyEventListener {
-        public void onDispatchKeyEvent(KeyEvent keyEvent);
-    }
-
-    public static class ActionBarPopupWindowLayout extends LinearLayout {
-
-        private OnDispatchKeyEventListener mOnDispatchKeyEventListener;
-
-        public ActionBarPopupWindowLayout(Context context) {
-            super(context);
-        }
-
-        public ActionBarPopupWindowLayout(Context context, AttributeSet attrs) {
-            super(context, attrs);
-        }
-
-        public ActionBarPopupWindowLayout(Context context, AttributeSet attrs, int defStyle) {
-            super(context, attrs, defStyle);
-        }
-
-        public void setDispatchKeyEventListener(OnDispatchKeyEventListener listener) {
-            mOnDispatchKeyEventListener = listener;
-        }
-
-        @Override
-        public boolean dispatchKeyEvent(KeyEvent event) {
-            if (mOnDispatchKeyEventListener != null) {
-                mOnDispatchKeyEventListener.onDispatchKeyEvent(event);
-            }
-            return super.dispatchKeyEvent(event);
-        }
     }
 }

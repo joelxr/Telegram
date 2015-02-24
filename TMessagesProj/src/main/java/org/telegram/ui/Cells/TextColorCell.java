@@ -19,14 +19,14 @@ import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
+import org.telegram.R;
 
 public class TextColorCell extends FrameLayout {
-    private static Paint paint;
     private TextView textView;
     private Drawable colorDrawable;
+    private static Paint paint;
     private boolean needDivider;
     private int currentColor;
 

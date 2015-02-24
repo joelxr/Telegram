@@ -22,8 +22,8 @@ public abstract class Keyframe implements Cloneable {
 
     float mFraction;
     Class mValueType;
-    boolean mHasValue = false;
     private Interpolator mInterpolator = null;
+    boolean mHasValue = false;
 
     public static Keyframe ofInt(float fraction, int value) {
         return new IntKeyframe(fraction, value);
@@ -54,7 +54,6 @@ public abstract class Keyframe implements Cloneable {
     }
 
     public abstract Object getValue();
-
     public abstract void setValue(Object value);
 
     public float getFraction() {

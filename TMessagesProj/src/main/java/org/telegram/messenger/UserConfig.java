@@ -17,7 +17,7 @@ import org.telegram.android.MessagesStorage;
 import java.io.File;
 
 public class UserConfig {
-    private final static Object sync = new Object();
+    private static TLRPC.User currentUser;
     public static boolean registeredForPush = false;
     public static boolean registeredForInternalPush = false;
     public static String pushString = "";
@@ -27,9 +27,9 @@ public class UserConfig {
     public static String contactsHash = "";
     public static String importHash = "";
     public static boolean blockedUsersLoaded = false;
+    private final static Object sync = new Object();
     public static boolean saveIncomingPhotos = false;
     public static int contactsVersion = 1;
-    private static TLRPC.User currentUser;
 
     public static int getNewMessageId() {
         int id;

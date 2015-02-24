@@ -29,11 +29,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RuleSet {
-    public static Pattern pattern = Pattern.compile("[0-9]+");
     public int matchLen;
     public ArrayList<PhoneRule> rules = new ArrayList<PhoneRule>();
     public boolean hasRuleWithIntlPrefix;
     public boolean hasRuleWithTrunkPrefix;
+    public static Pattern pattern = Pattern.compile("[0-9]+");
 
     String format(String str, String intlPrefix, String trunkPrefix, boolean prefixRequired) {
         if (str.length() >= matchLen) {

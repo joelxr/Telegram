@@ -11,6 +11,11 @@ package org.telegram.messenger;
 import java.util.HashMap;
 
 public class Action {
+    public interface ActionDelegate {
+        void ActionDidFinishExecution(Action action, HashMap<String, Object> params);
+        void ActionDidFailExecution(Action action);
+    }
+
     public ActionDelegate delegate;
 
     public void execute(HashMap params) {
@@ -19,10 +24,5 @@ public class Action {
 
     public void cancel() {
 
-    }
-
-    public interface ActionDelegate {
-        void ActionDidFinishExecution(Action action, HashMap<String, Object> params);
-        void ActionDidFailExecution(Action action);
     }
 }

@@ -22,16 +22,16 @@ import android.provider.ContactsContract;
 import android.util.SparseArray;
 
 import org.telegram.PhoneFormat.PhoneFormat;
-import org.telegram.R;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLog;
+import org.telegram.R;
 import org.telegram.messenger.RPCRequest;
 import org.telegram.messenger.TLObject;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
+import org.telegram.messenger.ApplicationLoader;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,31 +42,34 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ContactsController {
 
-    private static final Object loadContactsSync = new Object();
-    private static volatile ContactsController Instance = null;
-    private final Object observerLock = new Object();
-    public boolean contactsLoaded = false;
-    public HashMap<Integer, Contact> contactsBook = new HashMap<Integer, Contact>();
-    public HashMap<String, Contact> contactsBookSPhones = new HashMap<String, Contact>();
-    public ArrayList<Contact> phoneBookContacts = new ArrayList<Contact>();
-    public ArrayList<TLRPC.TL_contact> contacts = new ArrayList<TLRPC.TL_contact>();
-    public SparseArray<TLRPC.TL_contact> contactsDict = new SparseArray<TLRPC.TL_contact>();
-    public HashMap<String, ArrayList<TLRPC.TL_contact>> usersSectionsDict = new HashMap<String, ArrayList<TLRPC.TL_contact>>();
-    public ArrayList<String> sortedUsersSectionsArray = new ArrayList<String>();
-    public HashMap<String, TLRPC.TL_contact> contactsByPhone = new HashMap<String, TLRPC.TL_contact>();
     private Account currentAccount;
     private boolean loadingContacts = false;
+    private static final Object loadContactsSync = new Object();
     private boolean ignoreChanges = false;
     private boolean contactsSyncInProgress = false;
+    private final Object observerLock = new Object();
+    public boolean contactsLoaded = false;
     private boolean contactsBookLoaded = false;
     private String lastContactsVersions = "";
     private ArrayList<Integer> delayedContactsUpdate = new ArrayList<Integer>();
     private String inviteText;
     private boolean updatingInviteText = false;
+
     private int loadingDeleteInfo = 0;
     private int deleteAccountTTL;
     private int loadingLastSeenInfo = 0;
     private ArrayList<TLRPC.PrivacyRule> privacyRules = null;
+
+    public static class Contact {
+        public int id;
+        public ArrayList<String> phones = new ArrayList<String>();
+        public ArrayList<String> phoneTypes = new ArrayList<String>();
+        public ArrayList<String> shortPhones = new ArrayList<String>();
+        public ArrayList<Integer> phoneDeleted = new ArrayList<Integer>();
+        public String first_name;
+        public String last_name;
+    }
+
     private String[] projectionPhones = {
         ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
         ContactsContract.CommonDataKinds.Phone.NUMBER,
@@ -81,13 +84,18 @@ public class ContactsController {
         ContactsContract.CommonDataKinds.StructuredName.MIDDLE_NAME
     };
 
-    public ContactsController() {
-        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
-        if (preferences.getBoolean("needGetStatuses", false)) {
-            reloadContactsStatuses();
-        }
-    }
+    public HashMap<Integer, Contact> contactsBook = new HashMap<Integer, Contact>();
+    public HashMap<String, Contact> contactsBookSPhones = new HashMap<String, Contact>();
+    public ArrayList<Contact> phoneBookContacts = new ArrayList<Contact>();
 
+    public ArrayList<TLRPC.TL_contact> contacts = new ArrayList<TLRPC.TL_contact>();
+    public SparseArray<TLRPC.TL_contact> contactsDict = new SparseArray<TLRPC.TL_contact>();
+    public HashMap<String, ArrayList<TLRPC.TL_contact>> usersSectionsDict = new HashMap<String, ArrayList<TLRPC.TL_contact>>();
+    public ArrayList<String> sortedUsersSectionsArray = new ArrayList<String>();
+
+    public HashMap<String, TLRPC.TL_contact> contactsByPhone = new HashMap<String, TLRPC.TL_contact>();
+
+    private static volatile ContactsController Instance = null;
     public static ContactsController getInstance() {
         ContactsController localInstance = Instance;
         if (localInstance == null) {
@@ -101,24 +109,11 @@ public class ContactsController {
         return localInstance;
     }
 
-    public static String formatName(String firstName, String lastName) {
-        String result = null;
-        if (LocaleController.nameDisplayOrder == 1) {
-            result = firstName;
-            if (result == null || result.length() == 0) {
-                result = lastName;
-            } else if (result.length() != 0 && lastName != null && lastName.length() != 0) {
-                result += " " + lastName;
-            }
-        } else {
-            result = lastName;
-            if (result == null || result.length() == 0) {
-                result = firstName;
-            } else if (result.length() != 0 && firstName != null && firstName.length() != 0) {
-                result += " " + firstName;
-            }
+    public ContactsController() {
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        if (preferences.getBoolean("needGetStatuses", false)) {
+            reloadContactsStatuses();
         }
-        return result.trim();
     }
 
     public void cleanup() {
@@ -1719,12 +1714,12 @@ public class ContactsController {
         NotificationCenter.getInstance().postNotificationName(NotificationCenter.privacyRulesUpdated);
     }
 
-    public int getDeleteAccountTTL() {
-        return deleteAccountTTL;
-    }
-
     public void setDeleteAccountTTL(int ttl) {
         deleteAccountTTL = ttl;
+    }
+
+    public int getDeleteAccountTTL() {
+        return deleteAccountTTL;
     }
 
     public boolean getLoadingDeleteInfo() {
@@ -1745,13 +1740,23 @@ public class ContactsController {
         reloadContactsStatuses();
     }
 
-    public static class Contact {
-        public int id;
-        public ArrayList<String> phones = new ArrayList<String>();
-        public ArrayList<String> phoneTypes = new ArrayList<String>();
-        public ArrayList<String> shortPhones = new ArrayList<String>();
-        public ArrayList<Integer> phoneDeleted = new ArrayList<Integer>();
-        public String first_name;
-        public String last_name;
+    public static String formatName(String firstName, String lastName) {
+        String result = null;
+        if (LocaleController.nameDisplayOrder == 1) {
+            result = firstName;
+            if (result == null || result.length() == 0) {
+                result = lastName;
+            } else if (result.length() != 0 && lastName != null && lastName.length() != 0) {
+                result += " " + lastName;
+            }
+        } else {
+            result = lastName;
+            if (result == null || result.length() == 0) {
+                result = firstName;
+            } else if (result.length() != 0 && firstName != null && firstName.length() != 0) {
+                result += " " + firstName;
+            }
+        }
+        return result.trim();
     }
 }

@@ -16,8 +16,13 @@ import android.widget.ListView;
 
 public class LayoutListView extends ListView {
 
+    public static interface OnInterceptTouchEventListener {
+        public abstract boolean onInterceptTouchEvent(MotionEvent event);
+    }
+
     private OnInterceptTouchEventListener onInterceptTouchEventListener;
     private int height = -1;
+
     public LayoutListView(Context context) {
         super(context);
     }
@@ -68,9 +73,5 @@ public class LayoutListView extends ListView {
             }
         }
         height = (bottom - top);
-    }
-
-    public static interface OnInterceptTouchEventListener {
-        public abstract boolean onInterceptTouchEvent(MotionEvent event);
     }
 }

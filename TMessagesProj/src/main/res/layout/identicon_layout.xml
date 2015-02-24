@@ -1,47 +1,45 @@
 <LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:background="#f0f0f0"
+    android:layout_width="fill_parent"
     android:orientation="vertical"
-    android:weightSum="100">
+    android:weightSum="100"
+    android:background="#f0f0f0"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <FrameLayout
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_weight="40"
-        android:paddingBottom="20dp"
         android:paddingLeft="20dp"
         android:paddingRight="20dp"
-        android:paddingTop="20dp">
+        android:paddingTop="20dp"
+        android:paddingBottom="20dp">
 
         <ImageView
-            android:id="@+id/identicon_view"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:scaleType="fitXY" />
+            android:scaleType="fitXY"
+            android:id="@+id/identicon_view"/>
 
     </FrameLayout>
 
-    <FrameLayout
-        android:layout_width="fill_parent"
+    <FrameLayout android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_weight="60"
-        android:background="#ffffff"
-        android:paddingBottom="10dp"
         android:paddingLeft="10dp"
-        android:paddingRight="10dp">
+        android:paddingRight="10dp"
+        android:paddingBottom="10dp"
+        android:background="#ffffff">
 
-        <TextView
-            android:id="@+id/identicon_text"
+        <TextView android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:textColor="#7f7f7f"
+            android:textSize="16dp"
             android:layout_gravity="center"
             android:autoLink="web"
             android:gravity="center"
-            android:textColor="#7f7f7f"
             android:textColorLink="#316f9f"
-            android:textSize="16dp" />
+            android:id="@+id/identicon_text"/>
 
     </FrameLayout>
 

@@ -214,6 +214,52 @@ public final class ObjectAnimator10 extends ValueAnimator {
     private Property mProperty;
     private boolean mAutoCancel = false;
 
+    public void setPropertyName(String propertyName) {
+        if (mValues != null) {
+            PropertyValuesHolder valuesHolder = mValues[0];
+            String oldName = valuesHolder.getPropertyName();
+            valuesHolder.setPropertyName(propertyName);
+            mValuesMap.remove(oldName);
+            mValuesMap.put(propertyName, valuesHolder);
+        }
+        mPropertyName = propertyName;
+        mInitialized = false;
+    }
+
+    public void setProperty(Property property) {
+        if (mValues != null) {
+            PropertyValuesHolder valuesHolder = mValues[0];
+            String oldName = valuesHolder.getPropertyName();
+            valuesHolder.setProperty(property);
+            mValuesMap.remove(oldName);
+            mValuesMap.put(mPropertyName, valuesHolder);
+        }
+        if (mProperty != null) {
+            mPropertyName = property.getName();
+        }
+        mProperty = property;
+        mInitialized = false;
+    }
+
+    public String getPropertyName() {
+        String propertyName = null;
+        if (mPropertyName != null) {
+            propertyName = mPropertyName;
+        } else if (mProperty != null) {
+            propertyName = mProperty.getName();
+        } else if (mValues != null && mValues.length > 0) {
+            for (int i = 0; i < mValues.length; ++i) {
+                if (i == 0) {
+                    propertyName = "";
+                } else {
+                    propertyName += ",";
+                }
+                propertyName += mValues[i].getPropertyName();
+            }
+        }
+        return propertyName;
+    }
+
     public ObjectAnimator10() {
 
     }
@@ -271,52 +317,6 @@ public final class ObjectAnimator10 extends ValueAnimator {
         anim.mTarget = target;
         anim.setValues(values);
         return anim;
-    }
-
-    public void setProperty(Property property) {
-        if (mValues != null) {
-            PropertyValuesHolder valuesHolder = mValues[0];
-            String oldName = valuesHolder.getPropertyName();
-            valuesHolder.setProperty(property);
-            mValuesMap.remove(oldName);
-            mValuesMap.put(mPropertyName, valuesHolder);
-        }
-        if (mProperty != null) {
-            mPropertyName = property.getName();
-        }
-        mProperty = property;
-        mInitialized = false;
-    }
-
-    public String getPropertyName() {
-        String propertyName = null;
-        if (mPropertyName != null) {
-            propertyName = mPropertyName;
-        } else if (mProperty != null) {
-            propertyName = mProperty.getName();
-        } else if (mValues != null && mValues.length > 0) {
-            for (int i = 0; i < mValues.length; ++i) {
-                if (i == 0) {
-                    propertyName = "";
-                } else {
-                    propertyName += ",";
-                }
-                propertyName += mValues[i].getPropertyName();
-            }
-        }
-        return propertyName;
-    }
-
-    public void setPropertyName(String propertyName) {
-        if (mValues != null) {
-            PropertyValuesHolder valuesHolder = mValues[0];
-            String oldName = valuesHolder.getPropertyName();
-            valuesHolder.setPropertyName(propertyName);
-            mValuesMap.remove(oldName);
-            mValuesMap.put(propertyName, valuesHolder);
-        }
-        mPropertyName = propertyName;
-        mInitialized = false;
     }
 
     @SuppressWarnings("unchecked")

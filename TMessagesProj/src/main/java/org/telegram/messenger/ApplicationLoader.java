@@ -31,30 +31,32 @@ import com.google.android.gms.gcm.GoogleCloudMessaging;
 
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
-import org.telegram.android.LocaleController;
 import org.telegram.android.MediaController;
+import org.telegram.android.NotificationsService;
+import org.telegram.android.SendMessagesHelper;
+import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
 import org.telegram.android.NativeLoader;
-import org.telegram.android.NotificationsService;
 import org.telegram.android.ScreenReceiver;
-import org.telegram.android.SendMessagesHelper;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ApplicationLoader extends Application {
+    private GoogleCloudMessaging gcm;
+    private AtomicInteger msgId = new AtomicInteger();
+    private String regid;
     public static final String EXTRA_MESSAGE = "message";
     public static final String PROPERTY_REG_ID = "registration_id";
     private static final String PROPERTY_APP_VERSION = "appVersion";
     private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
     public static Drawable cachedWallpaper = null;
+
     public static volatile Context applicationContext = null;
     public static volatile Handler applicationHandler = null;
+    private static volatile boolean applicationInited = false;
+
     public static volatile boolean isScreenOn = false;
     public static volatile boolean mainInterfacePaused = true;
-    private static volatile boolean applicationInited = false;
-    private GoogleCloudMessaging gcm;
-    private AtomicInteger msgId = new AtomicInteger();
-    private String regid;
 
     public static void postInitApplication() {
         if (applicationInited) {
@@ -103,6 +105,23 @@ public class ApplicationLoader extends Application {
         MediaController.getInstance();
     }
 
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        if (Build.VERSION.SDK_INT < 11) {
+            java.lang.System.setProperty("java.net.preferIPv4Stack", "true");
+            java.lang.System.setProperty("java.net.preferIPv6Addresses", "false");
+        }
+
+        applicationContext = getApplicationContext();
+        NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);
+
+        applicationHandler = new Handler(applicationContext.getMainLooper());
+
+        startPushService();
+    }
+
     public static void startPushService() {
         SharedPreferences preferences = applicationContext.getSharedPreferences("Notifications", MODE_PRIVATE);
 
@@ -130,32 +149,6 @@ public class ApplicationLoader extends Application {
         PendingIntent pintent = PendingIntent.getService(applicationContext, 0, new Intent(applicationContext, NotificationsService.class), 0);
         AlarmManager alarm = (AlarmManager)applicationContext.getSystemService(Context.ALARM_SERVICE);
         alarm.cancel(pintent);
-    }
-
-    public static int getAppVersion() {
-        try {
-            PackageInfo packageInfo = applicationContext.getPackageManager().getPackageInfo(applicationContext.getPackageName(), 0);
-            return packageInfo.versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
-            throw new RuntimeException("Could not get package name: " + e);
-        }
-    }
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-
-        if (Build.VERSION.SDK_INT < 11) {
-            java.lang.System.setProperty("java.net.preferIPv4Stack", "true");
-            java.lang.System.setProperty("java.net.preferIPv6Addresses", "false");
-        }
-
-        applicationContext = getApplicationContext();
-        NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);
-
-        applicationHandler = new Handler(applicationContext.getMainLooper());
-
-        startPushService();
     }
 
     @Override
@@ -216,6 +209,15 @@ public class ApplicationLoader extends Application {
 
     private SharedPreferences getGCMPreferences(Context context) {
         return getSharedPreferences(ApplicationLoader.class.getSimpleName(), Context.MODE_PRIVATE);
+    }
+
+    public static int getAppVersion() {
+        try {
+            PackageInfo packageInfo = applicationContext.getPackageManager().getPackageInfo(applicationContext.getPackageName(), 0);
+            return packageInfo.versionCode;
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new RuntimeException("Could not get package name: " + e);
+        }
     }
 
     private void registerInBackground() {

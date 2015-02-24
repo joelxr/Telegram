@@ -22,11 +22,11 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import org.telegram.R;
 import org.telegram.android.LocaleController;
-import org.telegram.android.MessagesController;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.TLRPC;
+import org.telegram.android.MessagesController;
+import org.telegram.R;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.IdenticonDrawable;
@@ -62,7 +62,7 @@ public class IdenticonActivity extends BaseFragment {
 
             fragmentView = inflater.inflate(R.layout.identicon_layout, container, false);
             ImageView identiconView = (ImageView) fragmentView.findViewById(R.id.identicon_view);
-            TextView textView = (TextView) fragmentView.findViewById(R.id.identicon_text);
+            TextView textView = (TextView)fragmentView.findViewById(R.id.identicon_text);
             TLRPC.EncryptedChat encryptedChat = MessagesController.getInstance().getEncryptedChat(chat_id);
             if (encryptedChat != null) {
                 IdenticonDrawable drawable = new IdenticonDrawable();
@@ -79,7 +79,7 @@ public class IdenticonActivity extends BaseFragment {
                 }
             });
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -110,7 +110,7 @@ public class IdenticonActivity extends BaseFragment {
                 if (getParentActivity() == null || fragmentView == null) {
                     return true;
                 }
-                LinearLayout layout = (LinearLayout) fragmentView;
+                LinearLayout layout = (LinearLayout)fragmentView;
                 WindowManager manager = (WindowManager) ApplicationLoader.applicationContext.getSystemService(Context.WINDOW_SERVICE);
                 int rotation = manager.getDefaultDisplay().getRotation();
 

@@ -13,8 +13,8 @@ import android.os.Looper;
 import android.os.Message;
 
 public class DispatchQueue extends Thread {
-    private final Object handlerSyncObject = new Object();
     public volatile Handler handler = null;
+    private final Object handlerSyncObject = new Object();
 
     public DispatchQueue(final String threadName) {
         setName(threadName);

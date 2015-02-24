@@ -17,23 +17,27 @@ import java.util.Locale;
 
 public class HandshakeAction extends Action implements TcpConnection.TcpConnectionDelegate {
 
-    static ArrayList<HashMap<String, Object>> serverPublicKeys = null;
-    final Object lock = new Object();
-    public Datacenter datacenter;
-    int timeDifference;
-    ServerSalt serverSalt;
     private ArrayList<Long> processedMessageIds;
+
     private byte[] authNonce;
     private byte[] authServerNonce;
     private byte[] authNewNonce;
+
     private byte[] authKey;
     private long authKeyId;
+
     private boolean processedPQRes;
+
     private ByteBufferDesc reqPQMsgData;
     private ByteBufferDesc reqDHMsgData;
     private ByteBufferDesc setClientDHParamsMsgData;
     private boolean wasDisconnect = false;
+
     private long lastOutgoingMessageId;
+
+    int timeDifference;
+    ServerSalt serverSalt;
+    public Datacenter datacenter;
 
     public HandshakeAction(Datacenter datacenter) {
         this.datacenter = datacenter;
@@ -83,6 +87,8 @@ public class HandshakeAction extends Action implements TcpConnection.TcpConnecti
         reqPQMsgData = sendMessageData(reqPq, generateMessageId());
     }
 
+    final Object lock = new Object();
+    static ArrayList<HashMap<String, Object>> serverPublicKeys = null;
     HashMap<String, Object> selectPublicKey(ArrayList<Long> fingerprints) {
         synchronized (lock) {
             if (serverPublicKeys == null) {

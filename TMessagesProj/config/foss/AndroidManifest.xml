@@ -4,13 +4,13 @@
     android:installLocation="auto">
 
     <application
-        android:name="org.telegram.messenger.ApplicationLoader"
         android:allowBackup="true"
-        android:hardwareAccelerated="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/AppName"
-        android:largeHeap="true"
-        android:theme="@style/Theme.TMessages.Start">
+        android:theme="@style/Theme.TMessages.Start"
+        android:name="org.telegram.messenger.ApplicationLoader"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true">
 
     </application>
 

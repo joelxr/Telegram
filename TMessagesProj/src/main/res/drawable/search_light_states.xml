@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/search_light_activated" android:state_enabled="true" android:state_focused="true" />
-    <item android:drawable="@drawable/search_light_activated" android:state_activated="true" android:state_enabled="true" />
-    <item android:drawable="@drawable/search_light" android:state_enabled="true" />
-    <item android:drawable="@drawable/search_light" />
+    <item android:state_enabled="true" android:state_focused="true" android:drawable="@drawable/search_light_activated"/>
+    <item android:state_enabled="true" android:state_activated="true" android:drawable="@drawable/search_light_activated"/>
+    <item android:state_enabled="true" android:drawable="@drawable/search_light"/>
+    <item android:drawable="@drawable/search_light"/>
 </selector>

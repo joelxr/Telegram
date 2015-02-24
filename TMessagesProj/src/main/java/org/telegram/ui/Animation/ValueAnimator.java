@@ -30,50 +30,53 @@ import java.util.HashMap;
 
 public class ValueAnimator extends Animator10 {
 
-    public static final int RESTART = 1;
-    private int mRepeatMode = RESTART;
-    public static final int REVERSE = 2;
-    public static final int INFINITE = -1;
-    static final int STOPPED = 0;
-    int mPlayingState = STOPPED;
-    static final int RUNNING = 1;
-    static final int SEEKED = 2;
-    private static final Interpolator sDefaultInterpolator = new AccelerateDecelerateInterpolator();
-    private Interpolator mInterpolator = sDefaultInterpolator;
-    protected static ThreadLocal<AnimationHandler> sAnimationHandler = new ThreadLocal<AnimationHandler>();
     private static float sDurationScale = 1.0f;
-    private long mDuration = (long) (300 * sDurationScale);
+    static final int STOPPED    = 0;
+    static final int RUNNING    = 1;
+    static final int SEEKED     = 2;
+
     long mStartTime;
     long mSeekTime = -1;
-    boolean mInitialized = false;
-    PropertyValuesHolder[] mValues;
-    HashMap<String, PropertyValuesHolder> mValuesMap;
     private long mPauseTime;
     private boolean mResumed = false;
+    protected static ThreadLocal<AnimationHandler> sAnimationHandler = new ThreadLocal<AnimationHandler>();
+    private static final Interpolator sDefaultInterpolator = new AccelerateDecelerateInterpolator();
     private boolean mPlayingBackwards = false;
     private int mCurrentIteration = 0;
     private float mCurrentFraction = 0f;
     private boolean mStartedDelay = false;
     private long mDelayStartTime;
+    int mPlayingState = STOPPED;
     private boolean mRunning = false;
     private boolean mStarted = false;
     private boolean mStartListenersCalled = false;
+    boolean mInitialized = false;
+
+    private long mDuration = (long)(300 * sDurationScale);
     private long mUnscaledDuration = 300;
     private long mStartDelay = 0;
     private long mUnscaledStartDelay = 0;
     private int mRepeatCount = 0;
+    private int mRepeatMode = RESTART;
+    private Interpolator mInterpolator = sDefaultInterpolator;
     private ArrayList<AnimatorUpdateListener> mUpdateListeners = null;
+    PropertyValuesHolder[] mValues;
+    HashMap<String, PropertyValuesHolder> mValuesMap;
 
-    public ValueAnimator() {
+    public static final int RESTART = 1;
+    public static final int REVERSE = 2;
+    public static final int INFINITE = -1;
 
+    public static void setDurationScale(float durationScale) {
+        sDurationScale = durationScale;
     }
 
     public static float getDurationScale() {
         return sDurationScale;
     }
 
-    public static void setDurationScale(float durationScale) {
-        sDurationScale = durationScale;
+    public ValueAnimator() {
+
     }
 
     public static ValueAnimator ofInt(int... values) {
@@ -99,29 +102,6 @@ public class ValueAnimator extends Animator10 {
         anim.setObjectValues(values);
         anim.setEvaluator(evaluator);
         return anim;
-    }
-
-    public static int getCurrentAnimationsCount() {
-        AnimationHandler handler = sAnimationHandler.get();
-        return handler != null ? handler.mAnimations.size() : 0;
-    }
-
-    public static void clearAllAnimations() {
-        AnimationHandler handler = sAnimationHandler.get();
-        if (handler != null) {
-            handler.mAnimations.clear();
-            handler.mPendingAnimations.clear();
-            handler.mDelayedAnims.clear();
-        }
-    }
-
-    private static AnimationHandler getOrCreateAnimationHandler() {
-        AnimationHandler handler = sAnimationHandler.get();
-        if (handler == null) {
-            handler = new AnimationHandler();
-            sAnimationHandler.set(handler);
-        }
-        return handler;
     }
 
     public void setIntValues(int... values) {
@@ -163,10 +143,6 @@ public class ValueAnimator extends Animator10 {
         mInitialized = false;
     }
 
-    public PropertyValuesHolder[] getValues() {
-        return mValues;
-    }
-
     public void setValues(PropertyValuesHolder... values) {
         int numValues = values.length;
         mValues = values;
@@ -175,6 +151,10 @@ public class ValueAnimator extends Animator10 {
             mValuesMap.put(valuesHolder.getPropertyName(), valuesHolder);
         }
         mInitialized = false;
+    }
+
+    public PropertyValuesHolder[] getValues() {
+        return mValues;
     }
 
     void initAnimation() {
@@ -187,24 +167,17 @@ public class ValueAnimator extends Animator10 {
         }
     }
 
-    public long getDuration() {
-        return mUnscaledDuration;
-    }
-
     public ValueAnimator setDuration(long duration) {
         if (duration < 0) {
             throw new IllegalArgumentException("Animators cannot have negative duration: " + duration);
         }
         mUnscaledDuration = duration;
-        mDuration = (long) (duration * sDurationScale);
+        mDuration = (long)(duration * sDurationScale);
         return this;
     }
 
-    public long getCurrentPlayTime() {
-        if (!mInitialized || mPlayingState == STOPPED) {
-            return 0;
-        }
-        return AnimationUtils.currentAnimationTimeMillis() - mStartTime;
+    public long getDuration() {
+        return mUnscaledDuration;
     }
 
     public void setCurrentPlayTime(long playTime) {
@@ -218,12 +191,102 @@ public class ValueAnimator extends Animator10 {
         doAnimationFrame(currentTime);
     }
 
+    public long getCurrentPlayTime() {
+        if (!mInitialized || mPlayingState == STOPPED) {
+            return 0;
+        }
+        return AnimationUtils.currentAnimationTimeMillis() - mStartTime;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected static class AnimationHandler implements Runnable {
+
+        protected final ArrayList<ValueAnimator> mAnimations = new ArrayList<ValueAnimator>();
+        private final ArrayList<ValueAnimator> mTmpAnimations = new ArrayList<ValueAnimator>();
+        protected final ArrayList<ValueAnimator> mPendingAnimations = new ArrayList<ValueAnimator>();
+        protected final ArrayList<ValueAnimator> mDelayedAnims = new ArrayList<ValueAnimator>();
+        private final ArrayList<ValueAnimator> mEndingAnims = new ArrayList<ValueAnimator>();
+        private final ArrayList<ValueAnimator> mReadyAnims = new ArrayList<ValueAnimator>();
+
+        private boolean mAnimationScheduled;
+
+        public void start() {
+            scheduleAnimation();
+        }
+
+        private void doAnimationFrame(long frameTime) {
+            while (mPendingAnimations.size() > 0) {
+                ArrayList<ValueAnimator> pendingCopy = (ArrayList<ValueAnimator>) mPendingAnimations.clone();
+                mPendingAnimations.clear();
+                int count = pendingCopy.size();
+                for (ValueAnimator anim : pendingCopy) {
+                    if (anim.mStartDelay == 0) {
+                        anim.startAnimation(this);
+                    } else {
+                        mDelayedAnims.add(anim);
+                    }
+                }
+            }
+
+            int numDelayedAnims = mDelayedAnims.size();
+            for (ValueAnimator anim : mDelayedAnims) {
+                if (anim.delayedAnimationFrame(frameTime)) {
+                    mReadyAnims.add(anim);
+                }
+            }
+            int numReadyAnims = mReadyAnims.size();
+            if (numReadyAnims > 0) {
+                for (ValueAnimator anim : mReadyAnims) {
+                    anim.startAnimation(this);
+                    anim.mRunning = true;
+                    mDelayedAnims.remove(anim);
+                }
+                mReadyAnims.clear();
+            }
+
+            int numAnims = mAnimations.size();
+            for (ValueAnimator mAnimation : mAnimations) {
+                mTmpAnimations.add(mAnimation);
+            }
+            for (int i = 0; i < numAnims; ++i) {
+                ValueAnimator anim = mTmpAnimations.get(i);
+                if (mAnimations.contains(anim) && anim.doAnimationFrame(frameTime)) {
+                    mEndingAnims.add(anim);
+                }
+            }
+            mTmpAnimations.clear();
+            if (mEndingAnims.size() > 0) {
+                for (ValueAnimator mEndingAnim : mEndingAnims) {
+                    mEndingAnim.endAnimation(this);
+                }
+                mEndingAnims.clear();
+            }
+
+            if (!mAnimations.isEmpty() || !mDelayedAnims.isEmpty()) {
+                scheduleAnimation();
+            }
+        }
+
+        @Override
+        public void run() {
+            mAnimationScheduled = false;
+            doAnimationFrame(System.nanoTime() / 1000000);
+        }
+
+        private void scheduleAnimation() {
+            if (!mAnimationScheduled) {
+                AndroidUtilities.runOnUIThread(this);
+                mAnimationScheduled = true;
+            }
+        }
+    }
+
     public long getStartDelay() {
         return mUnscaledStartDelay;
     }
 
     public void setStartDelay(long startDelay) {
-        this.mStartDelay = (long) (startDelay * sDurationScale);
+        this.mStartDelay = (long)(startDelay * sDurationScale);
         mUnscaledStartDelay = startDelay;
     }
 
@@ -243,20 +306,20 @@ public class ValueAnimator extends Animator10 {
         }
     }
 
-    public int getRepeatCount() {
-        return mRepeatCount;
-    }
-
     public void setRepeatCount(int value) {
         mRepeatCount = value;
     }
 
-    public int getRepeatMode() {
-        return mRepeatMode;
+    public int getRepeatCount() {
+        return mRepeatCount;
     }
 
     public void setRepeatMode(int value) {
         mRepeatMode = value;
+    }
+
+    public int getRepeatMode() {
+        return mRepeatMode;
     }
 
     public void addUpdateListener(AnimatorUpdateListener listener) {
@@ -285,17 +348,17 @@ public class ValueAnimator extends Animator10 {
     }
 
     @Override
-    public Interpolator getInterpolator() {
-        return mInterpolator;
-    }
-
-    @Override
     public void setInterpolator(Interpolator value) {
         if (value != null) {
             mInterpolator = value;
         } else {
             mInterpolator = new LinearInterpolator();
         }
+    }
+
+    @Override
+    public Interpolator getInterpolator() {
+        return mInterpolator;
     }
 
     public void setEvaluator(TypeEvaluator value) {
@@ -426,7 +489,7 @@ public class ValueAnimator extends Animator10 {
         if ((mStarted || mRunning) && mListeners != null) {
             if (!mRunning) {
                 notifyStartListeners();
-            }
+             }
             ArrayList<AnimatorListener> tmpListeners = (ArrayList<AnimatorListener>) mListeners.clone();
             int numListeners = tmpListeners.size();
             for (AnimatorListener tmpListener : tmpListeners) {
@@ -476,33 +539,33 @@ public class ValueAnimator extends Animator10 {
     boolean animationFrame(long currentTime) {
         boolean done = false;
         switch (mPlayingState) {
-            case RUNNING:
-            case SEEKED:
-                float fraction = mDuration > 0 ? (float) (currentTime - mStartTime) / mDuration : 1f;
-                if (fraction >= 1f) {
-                    if (mCurrentIteration < mRepeatCount || mRepeatCount == INFINITE) {
-                        if (mListeners != null) {
-                            int numListeners = mListeners.size();
-                            for (AnimatorListener mListener : mListeners) {
-                                mListener.onAnimationRepeat(this);
-                            }
+        case RUNNING:
+        case SEEKED:
+            float fraction = mDuration > 0 ? (float)(currentTime - mStartTime) / mDuration : 1f;
+            if (fraction >= 1f) {
+                if (mCurrentIteration < mRepeatCount || mRepeatCount == INFINITE) {
+                    if (mListeners != null) {
+                        int numListeners = mListeners.size();
+                        for (AnimatorListener mListener : mListeners) {
+                            mListener.onAnimationRepeat(this);
                         }
-                        if (mRepeatMode == REVERSE) {
-                            mPlayingBackwards = !mPlayingBackwards;
-                        }
-                        mCurrentIteration += (int) fraction;
-                        fraction = fraction % 1f;
-                        mStartTime += mDuration;
-                    } else {
-                        done = true;
-                        fraction = Math.min(fraction, 1.0f);
                     }
+                    if (mRepeatMode == REVERSE) {
+                        mPlayingBackwards = !mPlayingBackwards;
+                    }
+                    mCurrentIteration += (int)fraction;
+                    fraction = fraction % 1f;
+                    mStartTime += mDuration;
+                } else {
+                    done = true;
+                    fraction = Math.min(fraction, 1.0f);
                 }
-                if (mPlayingBackwards) {
-                    fraction = 1f - fraction;
-                }
-                animateValue(fraction);
-                break;
+            }
+            if (mPlayingBackwards) {
+                fraction = 1f - fraction;
+            }
+            animateValue(fraction);
+            break;
         }
 
         return done;
@@ -587,86 +650,26 @@ public class ValueAnimator extends Animator10 {
         void onAnimationUpdate(ValueAnimator animation);
     }
 
-    @SuppressWarnings("unchecked")
-    protected static class AnimationHandler implements Runnable {
+    public static int getCurrentAnimationsCount() {
+        AnimationHandler handler = sAnimationHandler.get();
+        return handler != null ? handler.mAnimations.size() : 0;
+    }
 
-        protected final ArrayList<ValueAnimator> mAnimations = new ArrayList<ValueAnimator>();
-        protected final ArrayList<ValueAnimator> mPendingAnimations = new ArrayList<ValueAnimator>();
-        protected final ArrayList<ValueAnimator> mDelayedAnims = new ArrayList<ValueAnimator>();
-        private final ArrayList<ValueAnimator> mTmpAnimations = new ArrayList<ValueAnimator>();
-        private final ArrayList<ValueAnimator> mEndingAnims = new ArrayList<ValueAnimator>();
-        private final ArrayList<ValueAnimator> mReadyAnims = new ArrayList<ValueAnimator>();
-
-        private boolean mAnimationScheduled;
-
-        public void start() {
-            scheduleAnimation();
+    public static void clearAllAnimations() {
+        AnimationHandler handler = sAnimationHandler.get();
+        if (handler != null) {
+            handler.mAnimations.clear();
+            handler.mPendingAnimations.clear();
+            handler.mDelayedAnims.clear();
         }
+    }
 
-        private void doAnimationFrame(long frameTime) {
-            while (mPendingAnimations.size() > 0) {
-                ArrayList<ValueAnimator> pendingCopy = (ArrayList<ValueAnimator>) mPendingAnimations.clone();
-                mPendingAnimations.clear();
-                int count = pendingCopy.size();
-                for (ValueAnimator anim : pendingCopy) {
-                    if (anim.mStartDelay == 0) {
-                        anim.startAnimation(this);
-                    } else {
-                        mDelayedAnims.add(anim);
-                    }
-                }
-            }
-
-            int numDelayedAnims = mDelayedAnims.size();
-            for (ValueAnimator anim : mDelayedAnims) {
-                if (anim.delayedAnimationFrame(frameTime)) {
-                    mReadyAnims.add(anim);
-                }
-            }
-            int numReadyAnims = mReadyAnims.size();
-            if (numReadyAnims > 0) {
-                for (ValueAnimator anim : mReadyAnims) {
-                    anim.startAnimation(this);
-                    anim.mRunning = true;
-                    mDelayedAnims.remove(anim);
-                }
-                mReadyAnims.clear();
-            }
-
-            int numAnims = mAnimations.size();
-            for (ValueAnimator mAnimation : mAnimations) {
-                mTmpAnimations.add(mAnimation);
-            }
-            for (int i = 0; i < numAnims; ++i) {
-                ValueAnimator anim = mTmpAnimations.get(i);
-                if (mAnimations.contains(anim) && anim.doAnimationFrame(frameTime)) {
-                    mEndingAnims.add(anim);
-                }
-            }
-            mTmpAnimations.clear();
-            if (mEndingAnims.size() > 0) {
-                for (ValueAnimator mEndingAnim : mEndingAnims) {
-                    mEndingAnim.endAnimation(this);
-                }
-                mEndingAnims.clear();
-            }
-
-            if (!mAnimations.isEmpty() || !mDelayedAnims.isEmpty()) {
-                scheduleAnimation();
-            }
+    private static AnimationHandler getOrCreateAnimationHandler() {
+        AnimationHandler handler = sAnimationHandler.get();
+        if (handler == null) {
+            handler = new AnimationHandler();
+            sAnimationHandler.set(handler);
         }
-
-        @Override
-        public void run() {
-            mAnimationScheduled = false;
-            doAnimationFrame(System.nanoTime() / 1000000);
-        }
-
-        private void scheduleAnimation() {
-            if (!mAnimationScheduled) {
-                AndroidUtilities.runOnUIThread(this);
-                mAnimationScheduled = true;
-            }
-        }
+        return handler;
     }
 }

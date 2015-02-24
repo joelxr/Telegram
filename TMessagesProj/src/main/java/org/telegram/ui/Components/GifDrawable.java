@@ -43,28 +43,46 @@ import java.util.Locale;
 
 public class GifDrawable extends Drawable implements Animatable, MediaController.MediaPlayerControl {
 
+    private static native void renderFrame(int[] pixels, int gifFileInPtr, int[] metaData);
+    private static native int openFile(int[] metaData, String filePath);
+    private static native void free(int gifFileInPtr);
+    private static native void reset(int gifFileInPtr);
+    private static native void setSpeedFactor(int gifFileInPtr, float factor);
+    private static native String getComment(int gifFileInPtr);
+    private static native int getLoopCount(int gifFileInPtr);
+    private static native int getDuration(int gifFileInPtr);
+    private static native int getCurrentPosition(int gifFileInPtr);
+    private static native int seekToTime(int gifFileInPtr, int pos, int[] pixels);
+    private static native int seekToFrame(int gifFileInPtr, int frameNr, int[] pixels);
+    private static native int saveRemainder(int gifFileInPtr);
+    private static native int restoreRemainder(int gifFileInPtr);
+    private static native long getAllocationByteCount(int gifFileInPtr);
+
     private static final Handler UI_HANDLER = new Handler(Looper.getMainLooper());
-    protected final Paint mPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
-    protected final int[] mColors;
+
+    private volatile int mGifInfoPtr;
+    private volatile boolean mIsRunning = true;
+
     private final int[] mMetaData = new int[5];//[w, h, imageCount, errorCode, post invalidation time]
     private final long mInputSourceLength;
+
+    private float mSx = 1f;
+    private float mSy = 1f;
+    private boolean mApplyTransformation;
     private final Rect mDstRect = new Rect();
+
     public WeakReference<View> parentView = null;
-    private final Runnable mInvalidateTask = new Runnable() {
-        @Override
-        public void run() {
-            if (parentView != null && parentView.get() != null) {
-                parentView.get().invalidate();
-            }
-        }
-    };
-    private volatile int mGifInfoPtr;
+
+    protected final Paint mPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
+    protected final int[] mColors;
+
     private final Runnable mResetTask = new Runnable() {
         @Override
         public void run() {
             reset(mGifInfoPtr);
         }
     };
+
     private final Runnable mStartTask = new Runnable() {
         @Override
         public void run() {
@@ -75,16 +93,31 @@ public class GifDrawable extends Drawable implements Animatable, MediaController
             mMetaData[4] = 0;
         }
     };
+
     private final Runnable mSaveRemainderTask = new Runnable() {
         @Override
         public void run() {
             saveRemainder(mGifInfoPtr);
         }
     };
-    private volatile boolean mIsRunning = true;
-    private float mSx = 1f;
-    private float mSy = 1f;
-    private boolean mApplyTransformation;
+
+    private final Runnable mInvalidateTask = new Runnable() {
+        @Override
+        public void run() {
+            if (parentView != null && parentView.get() != null) {
+                parentView.get().invalidate();
+            }
+        }
+    };
+
+    private static void runOnUiThread(Runnable task) {
+        if (Looper.myLooper() == UI_HANDLER.getLooper()) {
+            task.run();
+        } else {
+            UI_HANDLER.post(task);
+        }
+    }
+
     public GifDrawable(String filePath) throws Exception {
         mInputSourceLength = new File(filePath).length();
         mGifInfoPtr = openFile(mMetaData, filePath);
@@ -95,42 +128,6 @@ public class GifDrawable extends Drawable implements Animatable, MediaController
         mInputSourceLength = file.length();
         mGifInfoPtr = openFile(mMetaData, file.getPath());
         mColors = new int[mMetaData[0] * mMetaData[1]];
-    }
-
-    private static native void renderFrame(int[] pixels, int gifFileInPtr, int[] metaData);
-
-    private static native int openFile(int[] metaData, String filePath);
-
-    private static native void free(int gifFileInPtr);
-
-    private static native void reset(int gifFileInPtr);
-
-    private static native void setSpeedFactor(int gifFileInPtr, float factor);
-
-    private static native String getComment(int gifFileInPtr);
-
-    private static native int getLoopCount(int gifFileInPtr);
-
-    private static native int getDuration(int gifFileInPtr);
-
-    private static native int getCurrentPosition(int gifFileInPtr);
-
-    private static native int seekToTime(int gifFileInPtr, int pos, int[] pixels);
-
-    private static native int seekToFrame(int gifFileInPtr, int frameNr, int[] pixels);
-
-    private static native int saveRemainder(int gifFileInPtr);
-
-    private static native int restoreRemainder(int gifFileInPtr);
-
-    private static native long getAllocationByteCount(int gifFileInPtr);
-
-    private static void runOnUiThread(Runnable task) {
-        if (Looper.myLooper() == UI_HANDLER.getLooper()) {
-            task.run();
-        } else {
-            UI_HANDLER.post(task);
-        }
     }
 
     public void recycle() {
@@ -157,6 +154,11 @@ public class GifDrawable extends Drawable implements Animatable, MediaController
     @Override
     public int getIntrinsicWidth() {
         return mMetaData[0];
+    }
+
+    @Override
+    public void setAlpha(int alpha) {
+        mPaint.setAlpha(alpha);
     }
 
     @Override
@@ -377,11 +379,6 @@ public class GifDrawable extends Drawable implements Animatable, MediaController
     @Override
     public int getAlpha() {
         return mPaint.getAlpha();
-    }
-
-    @Override
-    public void setAlpha(int alpha) {
-        mPaint.setAlpha(alpha);
     }
 
     @Override

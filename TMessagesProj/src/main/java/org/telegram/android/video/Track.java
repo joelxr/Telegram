@@ -16,6 +16,7 @@ import com.coremedia.iso.boxes.AbstractMediaHeaderBox;
 import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.SoundMediaHeaderBox;
 import com.coremedia.iso.boxes.VideoMediaHeaderBox;
+import com.mp4parser.iso14496.part15.AvcConfigurationBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
@@ -23,7 +24,6 @@ import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.DecoderConfigDescriptor;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.ESDescriptor;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.SLConfigDescriptor;
-import com.mp4parser.iso14496.part15.AvcConfigurationBox;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import java.util.Map;
 
 @TargetApi(16)
 public class Track {
-    private static Map<Integer, Integer> samplingFrequencyIndexMap = new HashMap<Integer, Integer>();
     private long trackId = 0;
     private ArrayList<Sample> samples = new ArrayList<Sample>();
     private long duration = 0;
@@ -49,6 +48,7 @@ public class Track {
     private float volume = 0;
     private ArrayList<Long> sampleDurations = new ArrayList<Long>();
     private boolean isAudio = false;
+    private static Map<Integer, Integer> samplingFrequencyIndexMap = new HashMap<Integer, Integer>();
     private long lastPresentationTimeUs = 0;
     private boolean first = true;
 

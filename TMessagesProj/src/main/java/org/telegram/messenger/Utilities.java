@@ -55,7 +55,22 @@ import java.util.zip.GZIPOutputStream;
 import javax.crypto.Cipher;
 
 public class Utilities {
+    public static Pattern pattern = Pattern.compile("[0-9]+");
+    public static SecureRandom random = new SecureRandom();
+
+    public static ArrayList<String> goodPrimes = new ArrayList<String>();
+
+    public static class TPFactorizedValue {
+        public long p, q;
+    }
+
+    public static volatile DispatchQueue stageQueue = new DispatchQueue("stageQueue");
+    public static volatile DispatchQueue globalQueue = new DispatchQueue("globalQueue");
+    public static volatile DispatchQueue searchQueue = new DispatchQueue("searchQueue");
+    public static volatile DispatchQueue photoBookQueue = new DispatchQueue("photoBookQueue");
+
     final protected static char[] hexArray = "0123456789ABCDEF".toCharArray();
+
     static {
         try {
             File URANDOM_FILE = new File("/dev/urandom");
@@ -89,22 +104,11 @@ public class Utilities {
             }
         }
     }
-    public static Pattern pattern = Pattern.compile("[0-9]+");
-    public static SecureRandom random = new SecureRandom();
-    public static ArrayList<String> goodPrimes = new ArrayList<String>();
-    public static volatile DispatchQueue stageQueue = new DispatchQueue("stageQueue");
-    public static volatile DispatchQueue globalQueue = new DispatchQueue("globalQueue");
-    public static volatile DispatchQueue searchQueue = new DispatchQueue("searchQueue");
-    public static volatile DispatchQueue photoBookQueue = new DispatchQueue("photoBookQueue");
 
     public native static long doPQNative(long _what);
-
     public native static void loadBitmap(String path, Bitmap bitmap, int scale, int width, int height, int stride);
-
     public native static void blurBitmap(Object bitmap, int radius);
-
     public native static int convertVideoFrame(ByteBuffer src, ByteBuffer dest, int destFormat, int width, int height, int padding, int swap);
-
     private native static void aesIgeEncryption(ByteBuffer buffer, byte[] key, byte[] iv, boolean encrypt, int offset, int length);
 
     public static void aesIgeEncryption(ByteBuffer buffer, byte[] key, byte[] iv, boolean encrypt, boolean changeIv, int offset, int length) {
@@ -705,9 +709,5 @@ public class Utilities {
         if (BuildVars.DEBUG_VERSION) {
             UpdateManager.register(context, BuildVars.HOCKEY_APP_HASH);
         }
-    }
-
-    public static class TPFactorizedValue {
-        public long p, q;
     }
 }

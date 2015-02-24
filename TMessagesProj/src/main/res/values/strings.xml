@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 
+
 <resources>
     <string name="AppName">Telegram</string>
     <string name="LanguageName">English</string>
@@ -532,5 +533,4 @@
     <string name="formatterDay24H">HH:mm</string>
     <string name="formatterDay12H">h:mm a</string>
     <string name="formatDateAtTime">%1$s at %2$s</string>
-    <string name="NoSongs">No songs yet</string>
 </resources>

@@ -32,25 +32,32 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.Emoji;
 import org.telegram.android.LocaleController;
 import org.telegram.android.MediaController;
 import org.telegram.android.MessagesController;
-import org.telegram.android.NotificationCenter;
 import org.telegram.android.SendMessagesHelper;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLog;
+import org.telegram.android.NotificationCenter;
+import org.telegram.R;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.ui.AnimationCompat.AnimatorListenerAdapterProxy;
 import org.telegram.ui.AnimationCompat.AnimatorSetProxy;
 import org.telegram.ui.AnimationCompat.ObjectAnimatorProxy;
 import org.telegram.ui.AnimationCompat.ViewProxy;
+import org.telegram.messenger.ApplicationLoader;
 
 public class ChatActivityEnterView implements NotificationCenter.NotificationCenterDelegate, SizeNotifierRelativeLayout.SizeNotifierRelativeLayoutDelegate {
+
+    public static interface ChatActivityEnterViewDelegate {
+        public abstract void onMessageSend();
+        public abstract void needSendTyping();
+        public abstract void onAttachButtonHidden();
+        public abstract void onAttachButtonShow();
+    }
 
     private EditText messsageEditText;
     private ImageButton sendButton;
@@ -68,8 +75,10 @@ public class ChatActivityEnterView implements NotificationCenter.NotificationCen
     private ObjectAnimatorProxy runningAnimationAudio;
     private int runningAnimationType;
     private int audioInterfaceState;
+
     private WindowManager.LayoutParams windowLayoutParams;
     private boolean showingEmoji;
+
     private int keyboardHeight;
     private int keyboardHeightLand;
     private boolean keyboardVisible;
@@ -79,10 +88,12 @@ public class ChatActivityEnterView implements NotificationCenter.NotificationCen
     private float startedDraggingX = -1;
     private float distCanMove = AndroidUtilities.dp(80);
     private boolean recordingAudio;
+
     private Activity parentActivity;
     private long dialog_id;
     private boolean ignoreTextChange;
     private ChatActivityEnterViewDelegate delegate;
+
     public ChatActivityEnterView() {
         NotificationCenter.getInstance().addObserver(this, NotificationCenter.recordStarted);
         NotificationCenter.getInstance().addObserver(this, NotificationCenter.recordStartError);
@@ -721,6 +732,16 @@ public class ChatActivityEnterView implements NotificationCenter.NotificationCen
         dialog_id = id;
     }
 
+    public void setFieldText(String text) {
+        if (messsageEditText == null) {
+            return;
+        }
+        ignoreTextChange = true;
+        messsageEditText.setText(text);
+        messsageEditText.setSelection(messsageEditText.getText().length());
+        ignoreTextChange = false;
+    }
+
     public void setFieldFocused(boolean focus) {
         if (messsageEditText == null) {
             return;
@@ -756,16 +777,6 @@ public class ChatActivityEnterView implements NotificationCenter.NotificationCen
             return messsageEditText.getText().toString();
         }
         return null;
-    }
-
-    public void setFieldText(String text) {
-        if (messsageEditText == null) {
-            return;
-        }
-        ignoreTextChange = true;
-        messsageEditText.setText(text);
-        messsageEditText.setSelection(messsageEditText.getText().length());
-        ignoreTextChange = false;
     }
 
     public boolean isEmojiPopupShowing() {
@@ -878,15 +889,5 @@ public class ChatActivityEnterView implements NotificationCenter.NotificationCen
         } else if (id == NotificationCenter.hideEmojiKeyboard) {
             hideEmojiPopup();
         }
-    }
-
-    public static interface ChatActivityEnterViewDelegate {
-        public abstract void onMessageSend();
-
-        public abstract void needSendTyping();
-
-        public abstract void onAttachButtonHidden();
-
-        public abstract void onAttachButtonShow();
     }
 }

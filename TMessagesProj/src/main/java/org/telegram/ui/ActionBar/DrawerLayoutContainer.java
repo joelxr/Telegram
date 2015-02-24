@@ -24,8 +24,8 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ListView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
+import org.telegram.R;
 import org.telegram.ui.AnimationCompat.AnimatorListenerAdapterProxy;
 import org.telegram.ui.AnimationCompat.AnimatorSetProxy;
 import org.telegram.ui.AnimationCompat.ObjectAnimatorProxy;
@@ -73,6 +73,15 @@ public class DrawerLayoutContainer extends FrameLayout {
         shadowLeft = getResources().getDrawable(R.drawable.menu_shadow);
     }
 
+    private class InsetsListener implements View.OnApplyWindowInsetsListener {
+        @Override
+        public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+            final DrawerLayoutContainer drawerLayout = (DrawerLayoutContainer) v;
+            drawerLayout.setChildInsets(insets, insets.getSystemWindowInsetTop() > 0);
+            return insets.consumeSystemWindowInsets();
+        }
+    }
+
     private void configureApplyInsets(View drawerLayout) {
         if (Build.VERSION.SDK_INT >= 21) {
             drawerLayout.setOnApplyWindowInsetsListener(new InsetsListener());
@@ -116,12 +125,16 @@ public class DrawerLayoutContainer extends FrameLayout {
         requestLayout();
     }
 
-    public void moveDrawerByX(float dx) {
-        setDrawerPosition(drawerPosition + dx);
+    public void setDrawerLayout(ViewGroup layout) {
+        drawerLayout = layout;
+        addView(drawerLayout);
+        if (Build.VERSION.SDK_INT >= 21) {
+            drawerLayout.setFitsSystemWindows(true);
+        }
     }
 
-    public float getDrawerPosition() {
-        return drawerPosition;
+    public void moveDrawerByX(float dx) {
+        setDrawerPosition(drawerPosition + dx);
     }
 
     public void setDrawerPosition(float value) {
@@ -137,7 +150,11 @@ public class DrawerLayoutContainer extends FrameLayout {
         if (drawerLayout.getVisibility() != newVisibility) {
             drawerLayout.setVisibility(newVisibility);
         }
-        setScrimOpacity(drawerPosition / (float) drawerLayout.getMeasuredWidth());
+        setScrimOpacity(drawerPosition / (float)drawerLayout.getMeasuredWidth());
+    }
+
+    public float getDrawerPosition() {
+        return drawerPosition;
     }
 
     public void cancelCurrentAnimation() {
@@ -209,13 +226,9 @@ public class DrawerLayoutContainer extends FrameLayout {
         drawerOpened = opened;
         if (!opened) {
             if (drawerLayout instanceof ListView) {
-                ((ListView) drawerLayout).setSelectionFromTop(0, 0);
+                ((ListView)drawerLayout).setSelectionFromTop(0, 0);
             }
         }
-    }
-
-    private float getScrimOpacity() {
-        return scrimOpacity;
     }
 
     private void setScrimOpacity(float value) {
@@ -223,16 +236,12 @@ public class DrawerLayoutContainer extends FrameLayout {
         invalidate();
     }
 
-    public View getDrawerLayout() {
-        return drawerLayout;
+    private float getScrimOpacity() {
+        return scrimOpacity;
     }
 
-    public void setDrawerLayout(ViewGroup layout) {
-        drawerLayout = layout;
-        addView(drawerLayout);
-        if (Build.VERSION.SDK_INT >= 21) {
-            drawerLayout.setFitsSystemWindows(true);
-        }
+    public View getDrawerLayout() {
+        return drawerLayout;
     }
 
     public void setParentActionBarLayout(ActionBarLayout layout) {
@@ -291,8 +300,8 @@ public class DrawerLayoutContainer extends FrameLayout {
                         requestDisallowInterceptTouchEvent(true);
                     } else if (startedTracking) {
                         if (!beginTrackingSent) {
-                            if (((Activity) getContext()).getCurrentFocus() != null) {
-                                AndroidUtilities.hideKeyboard(((Activity) getContext()).getCurrentFocus());
+                            if (((Activity)getContext()).getCurrentFocus() != null) {
+                                AndroidUtilities.hideKeyboard(((Activity)getContext()).getCurrentFocus());
                             }
                             beginTrackingSent = true;
                         }
@@ -372,7 +381,7 @@ public class DrawerLayoutContainer extends FrameLayout {
             if (drawerLayout != child) {
                 child.layout(lp.leftMargin, lp.topMargin, lp.leftMargin + child.getMeasuredWidth(), lp.topMargin + child.getMeasuredHeight());
             } else {
-                child.layout(-child.getMeasuredWidth() + (int) drawerPosition, lp.topMargin, (int) drawerPosition, lp.topMargin + child.getMeasuredHeight());
+                child.layout(-child.getMeasuredWidth() + (int)drawerPosition, lp.topMargin, (int)drawerPosition, lp.topMargin + child.getMeasuredHeight());
             }
         }
         inLayout = false;
@@ -458,20 +467,11 @@ public class DrawerLayoutContainer extends FrameLayout {
         } else if (shadowLeft != null) {
             final float alpha = Math.max(0, Math.min(drawerPosition / AndroidUtilities.dp(20), 1.0f));
             if (alpha != 0) {
-                shadowLeft.setBounds((int) drawerPosition, child.getTop(), (int) drawerPosition + shadowLeft.getIntrinsicWidth(), child.getBottom());
+                shadowLeft.setBounds((int)drawerPosition, child.getTop(), (int)drawerPosition + shadowLeft.getIntrinsicWidth(), child.getBottom());
                 shadowLeft.setAlpha((int) (0xff * alpha));
                 shadowLeft.draw(canvas);
             }
         }
         return result;
-    }
-
-    private class InsetsListener implements View.OnApplyWindowInsetsListener {
-        @Override
-        public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
-            final DrawerLayoutContainer drawerLayout = (DrawerLayoutContainer) v;
-            drawerLayout.setChildInsets(insets, insets.getSystemWindowInsetTop() > 0);
-            return insets.consumeSystemWindowInsets();
-        }
     }
 }

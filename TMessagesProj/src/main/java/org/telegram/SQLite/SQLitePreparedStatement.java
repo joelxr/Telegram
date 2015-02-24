@@ -13,20 +13,21 @@ import org.telegram.messenger.FileLog;
 import java.nio.ByteBuffer;
 
 public class SQLitePreparedStatement {
-    private boolean isFinalized = false;
-    private int sqliteStatementHandle;
+	private boolean isFinalized = false;
+	private int sqliteStatementHandle;
 
-    private int queryArgsCount;
-    private boolean finalizeAfterQuery = false;
+	private int queryArgsCount;
+	private boolean finalizeAfterQuery = false;
 
-    public SQLitePreparedStatement(SQLiteDatabase db, String sql, boolean finalize) throws SQLiteException {
-        finalizeAfterQuery = finalize;
-        sqliteStatementHandle = prepare(db.getSQLiteHandle(), sql);
-    }
+	public int getStatementHandle() {
+		return sqliteStatementHandle;
+	}
 
-    public int getStatementHandle() {
-        return sqliteStatementHandle;
-    }
+	public SQLitePreparedStatement(SQLiteDatabase db, String sql, boolean finalize) throws SQLiteException {
+		finalizeAfterQuery = finalize;
+		sqliteStatementHandle = prepare(db.getSQLiteHandle(), sql);
+	}
+
 
     public SQLiteCursor query(Object[] args) throws SQLiteException {
         if (args == null || args.length != queryArgsCount) {
@@ -42,11 +43,11 @@ public class SQLitePreparedStatement {
             if (obj == null) {
                 bindNull(sqliteStatementHandle, i);
             } else if (obj instanceof Integer) {
-                bindInt(sqliteStatementHandle, i, (Integer) obj);
+                bindInt(sqliteStatementHandle, i, (Integer)obj);
             } else if (obj instanceof Double) {
-                bindDouble(sqliteStatementHandle, i, (Double) obj);
+                bindDouble(sqliteStatementHandle, i, (Double)obj);
             } else if (obj instanceof String) {
-                bindString(sqliteStatementHandle, i, (String) obj);
+                bindString(sqliteStatementHandle, i, (String)obj);
             } else {
                 throw new IllegalArgumentException();
             }
@@ -65,34 +66,34 @@ public class SQLitePreparedStatement {
         return this;
     }
 
-    public void requery() throws SQLiteException {
-        checkFinalized();
-        reset(sqliteStatementHandle);
-    }
+	public void requery() throws SQLiteException {
+		checkFinalized();
+		reset(sqliteStatementHandle);
+	}
 
-    public void dispose() {
-        if (finalizeAfterQuery) {
-            finalizeQuery();
-        }
-    }
+	public void dispose() {
+		if (finalizeAfterQuery) {
+			finalizeQuery();
+		}
+	}
 
-    void checkFinalized() throws SQLiteException {
-        if (isFinalized) {
-            throw new SQLiteException("Prepared query finalized");
-        }
-    }
+	void checkFinalized() throws SQLiteException {
+		if (isFinalized) {
+			throw new SQLiteException("Prepared query finalized");
+		}
+	}
 
-    public void finalizeQuery() {
+	public void finalizeQuery() {
         if (isFinalized) {
             return;
         }
-        try {
-            isFinalized = true;
-            finalize(sqliteStatementHandle);
-        } catch (SQLiteException e) {
+		try {
+			isFinalized = true;
+			finalize(sqliteStatementHandle);
+		} catch (SQLiteException e) {
             FileLog.e("tmessages", e.getMessage(), e);
-        }
-    }
+		}
+	}
 
     public void bindInteger(int index, int value) throws SQLiteException {
         bindInt(sqliteStatementHandle, index, value);
@@ -114,23 +115,14 @@ public class SQLitePreparedStatement {
         bindLong(sqliteStatementHandle, index, value);
     }
 
-    native void bindByteBuffer(int statementHandle, int index, ByteBuffer value, int length) throws SQLiteException;
-
-    native void bindString(int statementHandle, int index, String value) throws SQLiteException;
-
-    native void bindInt(int statementHandle, int index, int value) throws SQLiteException;
-
+	native void bindByteBuffer(int statementHandle, int index, ByteBuffer value, int length) throws SQLiteException;
+	native void bindString(int statementHandle, int index, String value) throws SQLiteException;
+	native void bindInt(int statementHandle, int index, int value) throws SQLiteException;
     native void bindLong(int statementHandle, int index, long value) throws SQLiteException;
-
-    native void bindDouble(int statementHandle, int index, double value) throws SQLiteException;
-
-    native void bindNull(int statementHandle, int index) throws SQLiteException;
-
-    native void reset(int statementHandle) throws SQLiteException;
-
-    native int prepare(int sqliteHandle, String sql) throws SQLiteException;
-
-    native void finalize(int statementHandle) throws SQLiteException;
-
+	native void bindDouble(int statementHandle, int index, double value) throws SQLiteException;
+	native void bindNull(int statementHandle, int index) throws SQLiteException;
+	native void reset(int statementHandle) throws SQLiteException;
+	native int prepare(int sqliteHandle, String sql) throws SQLiteException;
+	native void finalize(int statementHandle) throws SQLiteException;
     native int step(int statementHandle) throws SQLiteException;
 }

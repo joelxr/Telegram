@@ -29,25 +29,25 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.android.ContactsController;
 import org.telegram.android.LocaleController;
-import org.telegram.android.MessagesController;
 import org.telegram.android.MessagesStorage;
-import org.telegram.android.NotificationCenter;
 import org.telegram.android.SecretChatHelper;
-import org.telegram.messenger.FileLog;
 import org.telegram.messenger.TLRPC;
+import org.telegram.android.ContactsController;
+import org.telegram.messenger.FileLog;
+import org.telegram.android.MessagesController;
+import org.telegram.android.NotificationCenter;
+import org.telegram.R;
 import org.telegram.messenger.UserConfig;
-import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.ActionBarMenu;
-import org.telegram.ui.ActionBar.ActionBarMenuItem;
-import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Adapters.BaseSectionsAdapter;
 import org.telegram.ui.Adapters.ContactsAdapter;
 import org.telegram.ui.Adapters.ContactsSearchAdapter;
 import org.telegram.ui.Cells.UserCell;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.ActionBarMenu;
+import org.telegram.ui.ActionBar.ActionBarMenuItem;
+import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.SectionsListView;
 
 import java.util.ArrayList;
@@ -72,6 +72,10 @@ public class ContactsActivity extends BaseFragment implements NotificationCenter
     private HashMap<Integer, TLRPC.User> ignoreUsers;
     private boolean allowUsernameSearch = true;
     private ContactsActivityDelegate delegate;
+
+    public static interface ContactsActivityDelegate {
+        public abstract void didSelectContact(TLRPC.User user, String param);
+    }
 
     public ContactsActivity(Bundle args) {
         super(args);
@@ -170,7 +174,7 @@ public class ContactsActivity extends BaseFragment implements NotificationCenter
                         if (listView != null) {
                             listView.setAdapter(searchListViewAdapter);
                             searchListViewAdapter.notifyDataSetChanged();
-                            if (android.os.Build.VERSION.SDK_INT >= 11) {
+                            if(android.os.Build.VERSION.SDK_INT >= 11) {
                                 listView.setFastScrollAlwaysVisible(false);
                             }
                             listView.setFastScrollEnabled(false);
@@ -377,7 +381,7 @@ public class ContactsActivity extends BaseFragment implements NotificationCenter
                 }
             });
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -411,10 +415,10 @@ public class ContactsActivity extends BaseFragment implements NotificationCenter
             });
             builder.setNegativeButton(R.string.Cancel, null);
             showAlertDialog(builder);
-            ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams) editText.getLayoutParams();
+            ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams)editText.getLayoutParams();
             if (layoutParams != null) {
                 if (layoutParams instanceof FrameLayout.LayoutParams) {
-                    ((FrameLayout.LayoutParams) layoutParams).gravity = Gravity.CENTER_HORIZONTAL;
+                    ((FrameLayout.LayoutParams)layoutParams).gravity = Gravity.CENTER_HORIZONTAL;
                 }
                 layoutParams.rightMargin = layoutParams.leftMargin = AndroidUtilities.dp(10);
                 editText.setLayoutParams(layoutParams);
@@ -452,13 +456,13 @@ public class ContactsActivity extends BaseFragment implements NotificationCenter
                 listViewAdapter.notifyDataSetChanged();
             }
         } else if (id == NotificationCenter.updateInterfaces) {
-            int mask = (Integer) args[0];
+            int mask = (Integer)args[0];
             if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0 || (mask & MessagesController.UPDATE_MASK_NAME) != 0 || (mask & MessagesController.UPDATE_MASK_STATUS) != 0) {
                 updateVisibleRows(mask);
             }
         } else if (id == NotificationCenter.encryptedChatCreated) {
             if (createSecretChat && creatingChat) {
-                TLRPC.EncryptedChat encryptedChat = (TLRPC.EncryptedChat) args[0];
+                TLRPC.EncryptedChat encryptedChat = (TLRPC.EncryptedChat)args[0];
                 Bundle args2 = new Bundle();
                 args2.putInt("enc_id", encryptedChat.id);
                 presentFragment(new ChatActivity(args2), true);
@@ -484,9 +488,5 @@ public class ContactsActivity extends BaseFragment implements NotificationCenter
 
     public void setIgnoreUsers(HashMap<Integer, TLRPC.User> users) {
         ignoreUsers = users;
-    }
-
-    public static interface ContactsActivityDelegate {
-        public abstract void didSelectContact(TLRPC.User user, String param);
     }
 }

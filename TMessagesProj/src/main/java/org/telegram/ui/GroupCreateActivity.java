@@ -38,21 +38,21 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.telegram.PhoneFormat.PhoneFormat;
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.android.ContactsController;
+import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.android.LocaleController;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.TLRPC;
+import org.telegram.android.ContactsController;
+import org.telegram.messenger.FileLog;
 import org.telegram.android.MessagesController;
 import org.telegram.android.NotificationCenter;
-import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.FileLog;
-import org.telegram.messenger.TLRPC;
+import org.telegram.R;
+import org.telegram.ui.Adapters.ContactsAdapter;
+import org.telegram.ui.Adapters.ContactsSearchAdapter;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.Adapters.ContactsAdapter;
-import org.telegram.ui.Adapters.ContactsSearchAdapter;
 import org.telegram.ui.Cells.UserCell;
 import org.telegram.ui.Components.SectionsListView;
 
@@ -61,13 +61,43 @@ import java.util.HashMap;
 
 public class GroupCreateActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
-    private final static int done_button = 1;
+    public static interface GroupCreateActivityDelegate {
+        public abstract void didSelectUsers(ArrayList<Integer> ids);
+    }
+
+    private class XImageSpan extends ImageSpan {
+        public int uid;
+
+        public XImageSpan(Drawable d, int verticalAlignment) {
+            super(d, verticalAlignment);
+        }
+
+        @Override
+        public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt fm) {
+            if (fm == null) {
+                fm = new Paint.FontMetricsInt();
+            }
+
+            int sz = super.getSize(paint, text, start, end, fm);
+            int offset = AndroidUtilities.dp(6);
+            int w = (fm.bottom - fm.top) / 2;
+            fm.top = -w - offset;
+            fm.bottom = w - offset;
+            fm.ascent = -w - offset;
+            fm.leading = 0;
+            fm.descent = w - offset;
+            return sz;
+        }
+    }
+
     private ContactsAdapter listViewAdapter;
     private TextView emptyTextView;
     private EditText userSelectEditText;
     private SectionsListView listView;
     private ContactsSearchAdapter searchListViewAdapter;
+
     private GroupCreateActivityDelegate delegate;
+
     private int beforeChangeIndex;
     private int maxCount = 200;
     private boolean ignoreChange = false;
@@ -79,6 +109,9 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
     private CharSequence changeString;
     private HashMap<Integer, XImageSpan> selectedContacts = new HashMap<Integer, XImageSpan>();
     private ArrayList<XImageSpan> allSpans = new ArrayList<XImageSpan>();
+
+    private final static int done_button = 1;
+
     public GroupCreateActivity() {
         super();
     }
@@ -260,7 +293,7 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
                                 if (listView != null) {
                                     listView.setAdapter(searchListViewAdapter);
                                     searchListViewAdapter.notifyDataSetChanged();
-                                    if (android.os.Build.VERSION.SDK_INT >= 11) {
+                                    if(android.os.Build.VERSION.SDK_INT >= 11) {
                                         listView.setFastScrollAlwaysVisible(false);
                                     }
                                     listView.setFastScrollEnabled(false);
@@ -436,7 +469,7 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
                 }
             });
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -451,7 +484,7 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
                 listViewAdapter.notifyDataSetChanged();
             }
         } else if (id == NotificationCenter.updateInterfaces) {
-            int mask = (Integer) args[0];
+            int mask = (Integer)args[0];
             if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0 || (mask & MessagesController.UPDATE_MASK_NAME) != 0 || (mask & MessagesController.UPDATE_MASK_STATUS) != 0) {
                 updateVisibleRows(mask);
             }
@@ -484,7 +517,7 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
     private XImageSpan createAndPutChipForUser(TLRPC.User user) {
         LayoutInflater lf = (LayoutInflater) ApplicationLoader.applicationContext.getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
         View textView = lf.inflate(R.layout.group_create_bubble, null);
-        TextView text = (TextView) textView.findViewById(R.id.bubble_text_view);
+        TextView text = (TextView)textView.findViewById(R.id.bubble_text_view);
         String name = ContactsController.formatName(user.first_name, user.last_name);
         if (name.length() == 0 && user.phone != null && user.phone.length() != 0) {
             name = PhoneFormat.getInstance().format("+" + user.phone);
@@ -517,34 +550,5 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
         userSelectEditText.setText(ssb);
         userSelectEditText.setSelection(ssb.length());
         return span;
-    }
-
-    public static interface GroupCreateActivityDelegate {
-        public abstract void didSelectUsers(ArrayList<Integer> ids);
-    }
-
-    private class XImageSpan extends ImageSpan {
-        public int uid;
-
-        public XImageSpan(Drawable d, int verticalAlignment) {
-            super(d, verticalAlignment);
-        }
-
-        @Override
-        public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt fm) {
-            if (fm == null) {
-                fm = new Paint.FontMetricsInt();
-            }
-
-            int sz = super.getSize(paint, text, start, end, fm);
-            int offset = AndroidUtilities.dp(6);
-            int w = (fm.bottom - fm.top) / 2;
-            fm.top = -w - offset;
-            fm.bottom = w - offset;
-            fm.ascent = -w - offset;
-            fm.leading = 0;
-            fm.descent = w - offset;
-            return sz;
-        }
     }
 }

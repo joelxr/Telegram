@@ -20,36 +20,33 @@ import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
+
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
 import org.telegram.android.LocaleController;
+import org.telegram.messenger.TLRPC;
 import org.telegram.android.MessageObject;
 import org.telegram.android.MessagesController;
 import org.telegram.android.NotificationCenter;
-import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.FileLog;
-import org.telegram.messenger.TLRPC;
+import org.telegram.R;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
-import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
+import org.telegram.ui.ActionBar.BaseFragment;
 
 import java.util.List;
 
 public class LocationActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
-    private final static int map_to_my_location = 1;
-    private final static int map_list_menu_map = 2;
-    private final static int map_list_menu_satellite = 3;
-    private final static int map_list_menu_hybrid = 4;
     private GoogleMap googleMap;
     private TextView distanceTextView;
     private Marker userMarker;
@@ -62,6 +59,15 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
     private boolean firstWas = false;
     private MapView mapView;
     private LocationActivityDelegate delegate;
+
+    private final static int map_to_my_location = 1;
+    private final static int map_list_menu_map = 2;
+    private final static int map_list_menu_satellite = 3;
+    private final static int map_list_menu_hybrid = 4;
+
+    public static interface LocationActivityDelegate {
+        public abstract void didSelectLocation(double latitude, double longitude);
+    }
 
     @Override
     public boolean onFragmentCreate() {
@@ -138,13 +144,13 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                 fragmentView = inflater.inflate(R.layout.location_attach_layout, container, false);
             }
 
-            avatarImageView = (BackupImageView) fragmentView.findViewById(R.id.location_avatar_view);
+            avatarImageView = (BackupImageView)fragmentView.findViewById(R.id.location_avatar_view);
             if (avatarImageView != null) {
                 avatarImageView.processDetach = false;
                 avatarImageView.imageReceiver.setRoundRadius(AndroidUtilities.dp(32));
             }
-            nameTextView = (TextView) fragmentView.findViewById(R.id.location_name_label);
-            distanceTextView = (TextView) fragmentView.findViewById(R.id.location_distance_label);
+            nameTextView = (TextView)fragmentView.findViewById(R.id.location_name_label);
+            distanceTextView = (TextView)fragmentView.findViewById(R.id.location_distance_label);
             View bottomView = fragmentView.findViewById(R.id.location_bottom_view);
             TextView sendButton = (TextView) fragmentView.findViewById(R.id.location_send_button);
             if (sendButton != null) {
@@ -152,7 +158,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                 sendButton.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
             }
 
-            mapView = (MapView) fragmentView.findViewById(R.id.map_view);
+            mapView = (MapView)fragmentView.findViewById(R.id.map_view);
             mapView.onCreate(null);
             try {
                 MapsInitializer.initialize(getParentActivity());
@@ -238,7 +244,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
                 positionMarker(myLocation);
             }
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -286,7 +292,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
             if (userLocation != null && distanceTextView != null) {
                 float distance = location.distanceTo(userLocation);
                 if (distance < 1000) {
-                    distanceTextView.setText(String.format("%d %s", (int) (distance), LocaleController.getString("MetersAway", R.string.MetersAway)));
+                    distanceTextView.setText(String.format("%d %s", (int)(distance), LocaleController.getString("MetersAway", R.string.MetersAway)));
                 } else {
                     distanceTextView.setText(String.format("%.2f %s", distance / 1000.0f, LocaleController.getString("KMetersAway", R.string.KMetersAway)));
                 }
@@ -315,7 +321,7 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
     @Override
     public void didReceivedNotification(int id, Object... args) {
         if (id == NotificationCenter.updateInterfaces) {
-            int mask = (Integer) args[0];
+            int mask = (Integer)args[0];
             if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0 || (mask & MessagesController.UPDATE_MASK_NAME) != 0) {
                 updateUserData();
             }
@@ -354,9 +360,5 @@ public class LocationActivity extends BaseFragment implements NotificationCenter
 
     public void setDelegate(LocationActivityDelegate delegate) {
         this.delegate = delegate;
-    }
-
-    public static interface LocationActivityDelegate {
-        public abstract void didSelectLocation(double latitude, double longitude);
     }
 }

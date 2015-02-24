@@ -45,31 +45,31 @@ import android.widget.ImageView;
 import android.widget.Scroller;
 import android.widget.TextView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
-import org.telegram.android.ImageReceiver;
-import org.telegram.android.LocaleController;
-import org.telegram.android.MediaController;
-import org.telegram.android.MessageObject;
-import org.telegram.android.MessagesController;
 import org.telegram.android.MessagesStorage;
-import org.telegram.android.NotificationCenter;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.android.LocaleController;
+import org.telegram.android.MediaController;
+import org.telegram.android.MessagesController;
+import org.telegram.android.NotificationCenter;
+import org.telegram.R;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
+import org.telegram.android.MessageObject;
 import org.telegram.messenger.Utilities;
-import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.ActionBarMenu;
-import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.AnimationCompat.AnimatorListenerAdapterProxy;
 import org.telegram.ui.AnimationCompat.AnimatorSetProxy;
 import org.telegram.ui.AnimationCompat.ObjectAnimatorProxy;
 import org.telegram.ui.AnimationCompat.ViewProxy;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.ActionBarMenu;
+import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.Components.ClippingImageView;
+import org.telegram.android.ImageReceiver;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -79,18 +79,17 @@ import java.util.Locale;
 
 public class PhotoViewer implements NotificationCenter.NotificationCenterDelegate, GestureDetector.OnGestureListener, GestureDetector.OnDoubleTapListener {
 
-    private final static int gallery_menu_save = 1;
-    private final static int gallery_menu_showall = 2;
-    private final static int gallery_menu_send = 3;
-    private final static int PAGE_SPACING = AndroidUtilities.dp(30);
-    private static Drawable[] progressDrawables = null;
-    private static volatile PhotoViewer Instance = null;
     private int classGuid;
     private PhotoViewerProvider placeProvider;
     private boolean isVisible;
+
     private Activity parentActivity;
+
     private ActionBar actionBar;
     private boolean isActionBarVisible = true;
+
+    private static Drawable[] progressDrawables = null;
+
     private WindowManager.LayoutParams windowLayoutParams;
     private FrameLayoutDrawer containerView;
     private FrameLayoutTouchListener windowView;
@@ -108,6 +107,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private ImageView shareButton;
     private RadialProgressView radialProgressViews[] = new RadialProgressView[3];
     private boolean canShowBottom = true;
+
     private int animationInProgress = 0;
     private long transitionAnimationStartTime = 0;
     private Runnable animationEndRunnable = null;
@@ -115,6 +115,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private PlaceProviderObject hideAfterAnimation;
     private boolean disableShowCheck = false;
     private Animation.AnimationListener animationListener;
+
     private ImageReceiver leftImage = new ImageReceiver();
     private ImageReceiver centerImage = new ImageReceiver();
     private ImageReceiver rightImage = new ImageReceiver();
@@ -125,6 +126,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private PlaceProviderObject currentPlaceObject;
     private String currentPathObject;
     private Bitmap currentThumb = null;
+
     private int avatarsUserId;
     private long currentDialogId;
     private int totalImagesCount;
@@ -133,6 +135,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private boolean loadingMoreImages;
     private boolean cacheEndReached;
     private boolean opennedFromMedia;
+
     private boolean draggingDown = false;
     private float dragY;
     private float translationX = 0;
@@ -168,6 +171,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private int switchImageAfterAnimation = 0;
     private VelocityTracker velocityTracker = null;
     private Scroller scroller = null;
+
     private ArrayList<MessageObject> imagesArrTemp = new ArrayList<MessageObject>();
     private HashMap<Integer, MessageObject> imagesByIdsTemp = new HashMap<Integer, MessageObject>();
     private ArrayList<MessageObject> imagesArr = new ArrayList<MessageObject>();
@@ -178,6 +182,196 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     private ArrayList<MediaController.PhotoEntry> imagesArrLocals = new ArrayList<MediaController.PhotoEntry>();
     private TLRPC.FileLocation currentUserAvatarLocation = null;
 
+    private final static int gallery_menu_save = 1;
+    private final static int gallery_menu_showall = 2;
+    private final static int gallery_menu_send = 3;
+
+    private final static int PAGE_SPACING = AndroidUtilities.dp(30);
+
+    private static class RadialProgressView {
+
+        private long lastUpdateTime = 0;
+        private float radOffset = 0;
+        private float currentProgress = 0;
+        private float animationProgressStart = 0;
+        private long currentProgressTime = 0;
+        private float animatedProgressValue = 0;
+        private RectF progressRect = new RectF();
+        private int backgroundState = -1;
+        private View parent = null;
+        private int size = AndroidUtilities.dp(64);
+        private int previousBackgroundState = -2;
+        private float animatedAlphaValue = 1.0f;
+
+        private static DecelerateInterpolator decelerateInterpolator = null;
+        private static Paint progressPaint = null;
+
+        public RadialProgressView(Context context, View parentView) {
+            if (decelerateInterpolator == null) {
+                decelerateInterpolator = new DecelerateInterpolator();
+                progressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                progressPaint.setStyle(Paint.Style.STROKE);
+                progressPaint.setStrokeCap(Paint.Cap.ROUND);
+                progressPaint.setStrokeWidth(AndroidUtilities.dp(2));
+                progressPaint.setColor(0xffffffff);
+            }
+            parent = parentView;
+        }
+
+        private void updateAnimation() {
+            long newTime = System.currentTimeMillis();
+            long dt = newTime - lastUpdateTime;
+            lastUpdateTime = newTime;
+
+            if (animatedProgressValue != 1) {
+                radOffset += 360 * dt / 3000.0f;
+                float progressDiff = currentProgress - animationProgressStart;
+                if (progressDiff > 0) {
+                    currentProgressTime += dt;
+                    if (currentProgressTime >= 300) {
+                        animatedProgressValue = currentProgress;
+                        animationProgressStart = currentProgress;
+                        currentProgressTime = 0;
+                    } else {
+                        animatedProgressValue = animationProgressStart + progressDiff * decelerateInterpolator.getInterpolation(currentProgressTime / 300.0f);
+                    }
+                }
+                parent.invalidate();
+            }
+            if (animatedProgressValue >= 1 && previousBackgroundState != -2) {
+                animatedAlphaValue -= dt / 200.0f;
+                if (animatedAlphaValue <= 0) {
+                    animatedAlphaValue = 0.0f;
+                    previousBackgroundState = -2;
+                }
+                parent.invalidate();
+            }
+        }
+
+        public void setProgress(float value, boolean animated) {
+            if (!animated) {
+                animatedProgressValue = value;
+                animationProgressStart = value;
+            } else {
+                animationProgressStart = animatedProgressValue;
+            }
+            currentProgress = value;
+            currentProgressTime = 0;
+        }
+
+        public void setBackgroundState(int state, boolean animated) {
+            lastUpdateTime = System.currentTimeMillis();
+            if (animated && backgroundState != state) {
+                previousBackgroundState = backgroundState;
+                animatedAlphaValue = 1.0f;
+            } else {
+                previousBackgroundState = -2;
+            }
+            backgroundState = state;
+            parent.invalidate();
+        }
+
+        public void onDraw(Canvas canvas) {
+            int x = (canvas.getWidth() - size) / 2;
+            int y = (canvas.getHeight() - size) / 2;
+
+            if (previousBackgroundState >= 0 && previousBackgroundState < 4) {
+                Drawable drawable = progressDrawables[previousBackgroundState];
+                if (drawable != null) {
+                    drawable.setAlpha((int)(255 * animatedAlphaValue));
+                    drawable.setBounds(x, y, x + size, y + size);
+                    drawable.draw(canvas);
+                }
+            }
+
+            if (backgroundState >= 0 && backgroundState < 4) {
+                Drawable drawable = progressDrawables[backgroundState];
+                if (drawable != null) {
+                    if (previousBackgroundState != -2) {
+                        drawable.setAlpha((int)(255 * (1.0f - animatedAlphaValue)));
+                    } else {
+                        drawable.setAlpha(255);
+                    }
+                    drawable.setBounds(x, y, x + size, y + size);
+                    drawable.draw(canvas);
+                }
+            }
+
+            if (backgroundState == 0 || backgroundState == 1 || previousBackgroundState == 0 || previousBackgroundState == 1) {
+                int diff = AndroidUtilities.dp(1);
+                if (previousBackgroundState != -2) {
+                    progressPaint.setAlpha((int)(255 * animatedAlphaValue));
+                } else {
+                    progressPaint.setAlpha(255);
+                }
+                progressRect.set(x + diff, y + diff, x + size - diff, y + size - diff);
+                canvas.drawArc(progressRect, -90 + radOffset, Math.max(4, 360 * animatedProgressValue), false, progressPaint);
+                updateAnimation();
+            }
+        }
+    }
+
+    public static class PlaceProviderObject {
+        public ImageReceiver imageReceiver;
+        public int viewX;
+        public int viewY;
+        public View parentView;
+        public Bitmap thumb;
+        public int user_id;
+        public int index;
+        public int size;
+        public int radius;
+    }
+
+    public static interface PhotoViewerProvider {
+        public PlaceProviderObject getPlaceForPhoto(MessageObject messageObject, TLRPC.FileLocation fileLocation, int index);
+        public void willSwitchFromPhoto(MessageObject messageObject, TLRPC.FileLocation fileLocation, int index);
+        public void willHidePhotoViewer();
+        public boolean isPhotoChecked(int index);
+        public void setPhotoChecked(int index);
+        public void cancelButtonPressed();
+        public void sendButtonPressed(int index);
+        public int getSelectedCount();
+    }
+
+    private class FrameLayoutTouchListener extends FrameLayout {
+        public FrameLayoutTouchListener(Context context) {
+            super(context);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            return getInstance().onTouchEvent(event);
+        }
+
+        @Override
+        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+            super.onLayout(changed, left, top, right, bottom);
+            getInstance().onLayout(changed, left, top, right, bottom);
+        }
+    }
+
+    private class FrameLayoutDrawer extends FrameLayout {
+        public FrameLayoutDrawer(Context context) {
+            super(context);
+            setWillNotDraw(false);
+        }
+
+        @Override
+        protected void onAnimationEnd() {
+            super.onAnimationEnd();
+            if (getInstance().animationListener != null) {
+                getInstance().animationListener.onAnimationEnd(null);
+            }
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            getInstance().onDraw(canvas);
+        }
+    }
+
+    private static volatile PhotoViewer Instance = null;
     public static PhotoViewer getInstance() {
         PhotoViewer localInstance = Instance;
         if (localInstance == null) {
@@ -195,7 +389,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     @Override
     public void didReceivedNotification(int id, Object... args) {
         if (id == NotificationCenter.FileDidFailedLoad) {
-            String location = (String) args[0];
+            String location = (String)args[0];
             for (int a = 0; a < 3; a++) {
                 if (currentFileNames[a] != null && currentFileNames[a].equals(location)) {
                     radialProgressViews[a].setProgress(1.0f, true);
@@ -204,7 +398,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
             }
         } else if (id == NotificationCenter.FileDidLoaded) {
-            String location = (String) args[0];
+            String location = (String)args[0];
             for (int a = 0; a < 3; a++) {
                 if (currentFileNames[a] != null && currentFileNames[a].equals(location)) {
                     radialProgressViews[a].setProgress(1.0f, true);
@@ -213,7 +407,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
             }
         } else if (id == NotificationCenter.FileLoadProgressChanged) {
-            String location = (String) args[0];
+            String location = (String)args[0];
             for (int a = 0; a < 3; a++) {
                 if (currentFileNames[a] != null && currentFileNames[a].equals(location)) {
                     Float progress = (Float) args[1];
@@ -221,13 +415,13 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
             }
         } else if (id == NotificationCenter.userPhotosLoaded) {
-            int guid = (Integer) args[4];
-            int uid = (Integer) args[0];
+            int guid = (Integer)args[4];
+            int uid = (Integer)args[0];
             if (avatarsUserId == uid && classGuid == guid) {
-                boolean fromCache = (Boolean) args[3];
+                boolean fromCache = (Boolean)args[3];
 
                 int setToImage = -1;
-                ArrayList<TLRPC.Photo> photos = (ArrayList<TLRPC.Photo>) args[5];
+                ArrayList<TLRPC.Photo> photos = (ArrayList<TLRPC.Photo>)args[5];
                 if (photos.isEmpty()) {
                     return;
                 }
@@ -273,12 +467,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
             }
         } else if (id == NotificationCenter.mediaCountDidLoaded) {
-            long uid = (Long) args[0];
+            long uid = (Long)args[0];
             if (uid == currentDialogId) {
-                if ((int) currentDialogId != 0 && (Boolean) args[2]) {
+                if ((int)currentDialogId != 0 && (Boolean)args[2]) {
                     MessagesController.getInstance().getMediaCount(currentDialogId, classGuid, false);
                 }
-                totalImagesCount = (Integer) args[1];
+                totalImagesCount = (Integer)args[1];
                 if (needSearchImageInArr && isFirstLoading) {
                     isFirstLoading = false;
                     loadingMoreImages = true;
@@ -288,12 +482,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 }
             }
         } else if (id == NotificationCenter.mediaDidLoaded) {
-            long uid = (Long) args[0];
-            int guid = (Integer) args[4];
+            long uid = (Long)args[0];
+            int guid = (Integer)args[4];
             if (uid == currentDialogId && guid == classGuid) {
                 loadingMoreImages = false;
-                ArrayList<MessageObject> arr = (ArrayList<MessageObject>) args[2];
-                boolean fromCache = (Boolean) args[3];
+                ArrayList<MessageObject> arr = (ArrayList<MessageObject>)args[2];
+                boolean fromCache = (Boolean)args[3];
                 cacheEndReached = !fromCache;
                 if (needSearchImageInArr) {
                     if (arr.isEmpty()) {
@@ -388,7 +582,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         containerView = new FrameLayoutDrawer(activity);
         containerView.setFocusable(false);
         windowView.addView(containerView);
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) containerView.getLayoutParams();
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams)containerView.getLayoutParams();
         layoutParams.width = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.height = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.gravity = Gravity.TOP | Gravity.LEFT;
@@ -442,7 +636,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                         closePhoto(false);
                         Bundle args2 = new Bundle();
                         args2.putLong("dialog_id", currentDialogId);
-                        ((LaunchActivity) parentActivity).presentFragment(new MediaActivity(args2), false, true);
+                        ((LaunchActivity)parentActivity).presentFragment(new MediaActivity(args2), false, true);
                     }
                 } else if (id == gallery_menu_send) {
                     /*Intent intent = new Intent(this, MessagesActivity.class);
@@ -505,7 +699,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         bottomLayout = new FrameLayout(containerView.getContext());
         containerView.addView(bottomLayout);
-        layoutParams = (FrameLayout.LayoutParams) bottomLayout.getLayoutParams();
+        layoutParams = (FrameLayout.LayoutParams)bottomLayout.getLayoutParams();
         layoutParams.width = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.height = AndroidUtilities.dp(48);
         layoutParams.gravity = Gravity.BOTTOM | Gravity.LEFT;
@@ -589,10 +783,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
                         ArrayList<Long> random_ids = null;
                         TLRPC.EncryptedChat encryptedChat = null;
-                        if ((int) obj.getDialogId() == 0 && obj.messageOwner.random_id != 0) {
+                        if ((int)obj.getDialogId() == 0 && obj.messageOwner.random_id != 0) {
                             random_ids = new ArrayList<Long>();
                             random_ids.add(obj.messageOwner.random_id);
-                            encryptedChat = MessagesController.getInstance().getEncryptedChat((int) (obj.getDialogId() >> 32));
+                            encryptedChat = MessagesController.getInstance().getEncryptedChat((int)(obj.getDialogId() >> 32));
                         }
 
                         MessagesController.getInstance().deleteMessages(arr, random_ids, encryptedChat);
@@ -655,7 +849,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         nameTextView.setTextColor(0xffffffff);
         nameTextView.setGravity(Gravity.CENTER);
         bottomLayout.addView(nameTextView);
-        layoutParams = (FrameLayout.LayoutParams) nameTextView.getLayoutParams();
+        layoutParams = (FrameLayout.LayoutParams)nameTextView.getLayoutParams();
         layoutParams.width = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.height = FrameLayout.LayoutParams.WRAP_CONTENT;
         layoutParams.gravity = Gravity.TOP;
@@ -672,7 +866,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         dateTextView.setTextColor(0xffb8bdbe);
         dateTextView.setGravity(Gravity.CENTER);
         bottomLayout.addView(dateTextView);
-        layoutParams = (FrameLayout.LayoutParams) dateTextView.getLayoutParams();
+        layoutParams = (FrameLayout.LayoutParams)dateTextView.getLayoutParams();
         layoutParams.width = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.height = FrameLayout.LayoutParams.WRAP_CONTENT;
         layoutParams.gravity = Gravity.TOP;
@@ -683,7 +877,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         pickerView = parentActivity.getLayoutInflater().inflate(R.layout.photo_picker_bottom_layout, null);
         containerView.addView(pickerView);
-        Button cancelButton = (Button) pickerView.findViewById(R.id.cancel_button);
+        Button cancelButton = (Button)pickerView.findViewById(R.id.cancel_button);
         cancelButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -704,7 +898,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
         });
 
-        layoutParams = (FrameLayout.LayoutParams) pickerView.getLayoutParams();
+        layoutParams = (FrameLayout.LayoutParams)pickerView.getLayoutParams();
         layoutParams.width = FrameLayout.LayoutParams.MATCH_PARENT;
         layoutParams.height = AndroidUtilities.dp(48);
         layoutParams.gravity = Gravity.BOTTOM;
@@ -712,10 +906,10 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         cancelButton.setText(LocaleController.getString("Cancel", R.string.Cancel).toUpperCase());
         cancelButton.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        doneButtonTextView = (TextView) doneButton.findViewById(R.id.done_button_text);
+        doneButtonTextView = (TextView)doneButton.findViewById(R.id.done_button_text);
         doneButtonTextView.setText(LocaleController.getString("Send", R.string.Send).toUpperCase());
         doneButtonTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-        doneButtonBadgeTextView = (TextView) doneButton.findViewById(R.id.done_button_badge);
+        doneButtonBadgeTextView = (TextView)doneButton.findViewById(R.id.done_button_badge);
         doneButtonBadgeTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
 
         gestureDetector = new GestureDetector(containerView.getContext(), this);
@@ -730,7 +924,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         checkImageView.setVisibility(View.GONE);
         checkImageView.setScaleType(ImageView.ScaleType.CENTER);
         checkImageView.setImageResource(R.drawable.selectphoto_large);
-        layoutParams = (FrameLayout.LayoutParams) checkImageView.getLayoutParams();
+        layoutParams = (FrameLayout.LayoutParams)checkImageView.getLayoutParams();
         layoutParams.width = AndroidUtilities.dp(46);
         layoutParams.height = AndroidUtilities.dp(46);
         layoutParams.gravity = Gravity.RIGHT;
@@ -1287,7 +1481,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 if (currentThumb != null && imageReceiver == centerImage) {
                     placeHolder = currentThumb;
                 }
-                int size = (int) (AndroidUtilities.getPhotoSize() / AndroidUtilities.density);
+                int size = (int)(AndroidUtilities.getPhotoSize() / AndroidUtilities.density);
                 imageReceiver.setImage(photoEntry.path, String.format(Locale.US, "%d_%d", size, size), placeHolder != null ? new BitmapDrawable(null, placeHolder) : null);
             } else {
                 imageReceiver.setImageBitmap((Bitmap) null);
@@ -1561,7 +1755,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         final PlaceProviderObject object = placeProvider.getPlaceForPhoto(currentMessageObject, currentFileLocation, currentIndex);
 
-        if (animated) {
+        if(animated) {
             AndroidUtilities.lockOrientation(parentActivity);
 
             animationInProgress = 1;
@@ -1738,9 +1932,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 radialProgressViews[a].setBackgroundState(-1, false);
             }
         }
-        centerImage.setImageBitmap((Bitmap) null);
-        leftImage.setImageBitmap((Bitmap) null);
-        rightImage.setImageBitmap((Bitmap) null);
+        centerImage.setImageBitmap((Bitmap)null);
+        leftImage.setImageBitmap((Bitmap)null);
+        rightImage.setImageBitmap((Bitmap)null);
         if (object != null) {
             object.imageReceiver.setVisible(true, true);
         }
@@ -1794,7 +1988,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             return false;
         }
 
-        if (ev.getPointerCount() == 1 && gestureDetector.onTouchEvent(ev) && doubleTap) {
+        if(ev.getPointerCount() == 1 && gestureDetector.onTouchEvent(ev) && doubleTap) {
             doubleTap = false;
             moving = false;
             zooming = false;
@@ -1832,7 +2026,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             }
         } else if (ev.getActionMasked() == MotionEvent.ACTION_MOVE) {
             if (canZoom && ev.getPointerCount() == 2 && !draggingDown && zooming && !changingPage) {
-                scale = (float) Math.hypot(ev.getX(1) - ev.getX(0), ev.getY(1) - ev.getY(0)) / pinchStartDistance * pinchStartScale;
+                scale = (float)Math.hypot(ev.getX(1) - ev.getX(0), ev.getY(1) - ev.getY(0)) / pinchStartDistance * pinchStartScale;
                 translationX = (pinchCenterX - containerView.getWidth() / 2) - ((pinchCenterX - containerView.getWidth() / 2) - pinchStartX) * (scale / pinchStartScale);
                 translationY = (pinchCenterY - containerView.getHeight() / 2) - ((pinchCenterY - containerView.getHeight() / 2) - pinchStartY) * (scale / pinchStartScale);
                 updateMinMax(scale);
@@ -1904,7 +2098,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 if (scale < 1.0f) {
                     updateMinMax(1.0f);
                     animateTo(1.0f, 0, 0, true);
-                } else if (scale > 3.0f) {
+                } else if(scale > 3.0f) {
                     float atx = (pinchCenterX - containerView.getWidth() / 2) - ((pinchCenterX - containerView.getWidth() / 2) - pinchStartX) * (3.0f / pinchStartScale);
                     float aty = (pinchCenterY - containerView.getHeight() / 2) - ((pinchCenterY - containerView.getHeight() / 2) - pinchStartY) * (3.0f / pinchStartScale);
                     updateMinMax(3.0f);
@@ -1942,11 +2136,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     velocity = velocityTracker.getXVelocity();
                 }
 
-                if ((translationX < minX - containerView.getWidth() / 3 || velocity < -AndroidUtilities.dp(650)) && rightImage.hasImage()) {
+                if((translationX < minX - containerView.getWidth() / 3 || velocity < -AndroidUtilities.dp(650)) && rightImage.hasImage()){
                     goToNext();
                     return true;
                 }
-                if ((translationX > maxX + containerView.getWidth() / 3 || velocity > AndroidUtilities.dp(650)) && leftImage.hasImage()) {
+                if((translationX > maxX + containerView.getWidth() / 3 || velocity > AndroidUtilities.dp(650)) && leftImage.hasImage()){
                     goToPrev();
                     return true;
                 }
@@ -2037,7 +2231,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         float aty = -1;
         float ai = -1;
         if (System.currentTimeMillis() - animationStartTime < animationDuration) {
-            ai = interpolator.getInterpolation((float) (System.currentTimeMillis() - animationStartTime) / animationDuration);
+            ai = interpolator.getInterpolation((float)(System.currentTimeMillis() - animationStartTime) / animationDuration);
             if (ai >= 0.99f) {
                 ai = -1;
             }
@@ -2176,7 +2370,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
     @SuppressLint("DrawAllocation")
     private void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        if (changed) {
+        if(changed) {
             scale = 1;
             translationX = 0;
             translationY = 0;
@@ -2187,8 +2381,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     @Override
                     public boolean onPreDraw() {
                         checkImageView.getViewTreeObserver().removeOnPreDrawListener(this);
-                        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) checkImageView.getLayoutParams();
-                        WindowManager manager = (WindowManager) ApplicationLoader.applicationContext.getSystemService(Activity.WINDOW_SERVICE);
+                        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams)checkImageView.getLayoutParams();
+                        WindowManager manager = (WindowManager)ApplicationLoader.applicationContext.getSystemService(Activity.WINDOW_SERVICE);
                         int rotation = manager.getDefaultDisplay().getRotation();
                         if (rotation == Surface.ROTATION_270 || rotation == Surface.ROTATION_90) {
                             layoutParams.topMargin = AndroidUtilities.dp(48);
@@ -2327,194 +2521,5 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     @Override
     public boolean onDoubleTapEvent(MotionEvent e) {
         return false;
-    }
-
-    public static interface PhotoViewerProvider {
-        public PlaceProviderObject getPlaceForPhoto(MessageObject messageObject, TLRPC.FileLocation fileLocation, int index);
-
-        public void willSwitchFromPhoto(MessageObject messageObject, TLRPC.FileLocation fileLocation, int index);
-
-        public void willHidePhotoViewer();
-
-        public boolean isPhotoChecked(int index);
-
-        public void setPhotoChecked(int index);
-
-        public void cancelButtonPressed();
-
-        public void sendButtonPressed(int index);
-
-        public int getSelectedCount();
-    }
-
-    private static class RadialProgressView {
-
-        private static DecelerateInterpolator decelerateInterpolator = null;
-        private static Paint progressPaint = null;
-        private long lastUpdateTime = 0;
-        private float radOffset = 0;
-        private float currentProgress = 0;
-        private float animationProgressStart = 0;
-        private long currentProgressTime = 0;
-        private float animatedProgressValue = 0;
-        private RectF progressRect = new RectF();
-        private int backgroundState = -1;
-        private View parent = null;
-        private int size = AndroidUtilities.dp(64);
-        private int previousBackgroundState = -2;
-        private float animatedAlphaValue = 1.0f;
-
-        public RadialProgressView(Context context, View parentView) {
-            if (decelerateInterpolator == null) {
-                decelerateInterpolator = new DecelerateInterpolator();
-                progressPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                progressPaint.setStyle(Paint.Style.STROKE);
-                progressPaint.setStrokeCap(Paint.Cap.ROUND);
-                progressPaint.setStrokeWidth(AndroidUtilities.dp(2));
-                progressPaint.setColor(0xffffffff);
-            }
-            parent = parentView;
-        }
-
-        private void updateAnimation() {
-            long newTime = System.currentTimeMillis();
-            long dt = newTime - lastUpdateTime;
-            lastUpdateTime = newTime;
-
-            if (animatedProgressValue != 1) {
-                radOffset += 360 * dt / 3000.0f;
-                float progressDiff = currentProgress - animationProgressStart;
-                if (progressDiff > 0) {
-                    currentProgressTime += dt;
-                    if (currentProgressTime >= 300) {
-                        animatedProgressValue = currentProgress;
-                        animationProgressStart = currentProgress;
-                        currentProgressTime = 0;
-                    } else {
-                        animatedProgressValue = animationProgressStart + progressDiff * decelerateInterpolator.getInterpolation(currentProgressTime / 300.0f);
-                    }
-                }
-                parent.invalidate();
-            }
-            if (animatedProgressValue >= 1 && previousBackgroundState != -2) {
-                animatedAlphaValue -= dt / 200.0f;
-                if (animatedAlphaValue <= 0) {
-                    animatedAlphaValue = 0.0f;
-                    previousBackgroundState = -2;
-                }
-                parent.invalidate();
-            }
-        }
-
-        public void setProgress(float value, boolean animated) {
-            if (!animated) {
-                animatedProgressValue = value;
-                animationProgressStart = value;
-            } else {
-                animationProgressStart = animatedProgressValue;
-            }
-            currentProgress = value;
-            currentProgressTime = 0;
-        }
-
-        public void setBackgroundState(int state, boolean animated) {
-            lastUpdateTime = System.currentTimeMillis();
-            if (animated && backgroundState != state) {
-                previousBackgroundState = backgroundState;
-                animatedAlphaValue = 1.0f;
-            } else {
-                previousBackgroundState = -2;
-            }
-            backgroundState = state;
-            parent.invalidate();
-        }
-
-        public void onDraw(Canvas canvas) {
-            int x = (canvas.getWidth() - size) / 2;
-            int y = (canvas.getHeight() - size) / 2;
-
-            if (previousBackgroundState >= 0 && previousBackgroundState < 4) {
-                Drawable drawable = progressDrawables[previousBackgroundState];
-                if (drawable != null) {
-                    drawable.setAlpha((int) (255 * animatedAlphaValue));
-                    drawable.setBounds(x, y, x + size, y + size);
-                    drawable.draw(canvas);
-                }
-            }
-
-            if (backgroundState >= 0 && backgroundState < 4) {
-                Drawable drawable = progressDrawables[backgroundState];
-                if (drawable != null) {
-                    if (previousBackgroundState != -2) {
-                        drawable.setAlpha((int) (255 * (1.0f - animatedAlphaValue)));
-                    } else {
-                        drawable.setAlpha(255);
-                    }
-                    drawable.setBounds(x, y, x + size, y + size);
-                    drawable.draw(canvas);
-                }
-            }
-
-            if (backgroundState == 0 || backgroundState == 1 || previousBackgroundState == 0 || previousBackgroundState == 1) {
-                int diff = AndroidUtilities.dp(1);
-                if (previousBackgroundState != -2) {
-                    progressPaint.setAlpha((int) (255 * animatedAlphaValue));
-                } else {
-                    progressPaint.setAlpha(255);
-                }
-                progressRect.set(x + diff, y + diff, x + size - diff, y + size - diff);
-                canvas.drawArc(progressRect, -90 + radOffset, Math.max(4, 360 * animatedProgressValue), false, progressPaint);
-                updateAnimation();
-            }
-        }
-    }
-
-    public static class PlaceProviderObject {
-        public ImageReceiver imageReceiver;
-        public int viewX;
-        public int viewY;
-        public View parentView;
-        public Bitmap thumb;
-        public int user_id;
-        public int index;
-        public int size;
-        public int radius;
-    }
-
-    private class FrameLayoutTouchListener extends FrameLayout {
-        public FrameLayoutTouchListener(Context context) {
-            super(context);
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            return getInstance().onTouchEvent(event);
-        }
-
-        @Override
-        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-            super.onLayout(changed, left, top, right, bottom);
-            getInstance().onLayout(changed, left, top, right, bottom);
-        }
-    }
-
-    private class FrameLayoutDrawer extends FrameLayout {
-        public FrameLayoutDrawer(Context context) {
-            super(context);
-            setWillNotDraw(false);
-        }
-
-        @Override
-        protected void onAnimationEnd() {
-            super.onAnimationEnd();
-            if (getInstance().animationListener != null) {
-                getInstance().animationListener.onAnimationEnd(null);
-            }
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            getInstance().onDraw(canvas);
-        }
     }
 }

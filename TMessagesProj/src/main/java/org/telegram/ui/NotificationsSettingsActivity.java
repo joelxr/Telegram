@@ -27,26 +27,26 @@ import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
-import org.telegram.android.MessagesController;
-import org.telegram.android.NotificationCenter;
 import org.telegram.android.NotificationsController;
+import org.telegram.android.NotificationCenter;
 import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.ConnectionsManager;
-import org.telegram.messenger.FileLog;
-import org.telegram.messenger.RPCRequest;
 import org.telegram.messenger.TLObject;
 import org.telegram.messenger.TLRPC;
-import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.messenger.ConnectionsManager;
+import org.telegram.messenger.FileLog;
+import org.telegram.android.MessagesController;
+import org.telegram.R;
+import org.telegram.messenger.RPCRequest;
 import org.telegram.ui.Adapters.BaseFragmentAdapter;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextColorCell;
 import org.telegram.ui.Cells.TextDetailSettingsCell;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.ColorPickerView;
 
 public class NotificationsSettingsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
@@ -354,9 +354,9 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                             return;
                         }
 
-                        LayoutInflater li = (LayoutInflater) getParentActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                        LayoutInflater li = (LayoutInflater)getParentActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
                         view = li.inflate(R.layout.settings_color_dialog_layout, null, false);
-                        final ColorPickerView colorPickerView = (ColorPickerView) view.findViewById(R.id.color_picker);
+                        final ColorPickerView colorPickerView = (ColorPickerView)view.findViewById(R.id.color_picker);
 
                         SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("Notifications", Activity.MODE_PRIVATE);
                         if (i == messageLedRow) {
@@ -400,7 +400,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                     } else if (i == messagePopupNotificationRow || i == groupPopupNotificationRow) {
                         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                         builder.setTitle(LocaleController.getString("PopupNotification", R.string.PopupNotification));
-                        builder.setItems(new CharSequence[]{
+                        builder.setItems(new CharSequence[] {
                                 LocaleController.getString("NoPopup", R.string.NoPopup),
                                 LocaleController.getString("OnlyWhenScreenOn", R.string.OnlyWhenScreenOn),
                                 LocaleController.getString("OnlyWhenScreenOff", R.string.OnlyWhenScreenOff),
@@ -426,7 +426,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                     } else if (i == messageVibrateRow || i == groupVibrateRow) {
                         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                         builder.setTitle(LocaleController.getString("Vibrate", R.string.Vibrate));
-                        builder.setItems(new CharSequence[]{
+                        builder.setItems(new CharSequence[] {
                                 LocaleController.getString("Disabled", R.string.Disabled),
                                 LocaleController.getString("Default", R.string.Default),
                                 LocaleController.getString("Short", R.string.Short),
@@ -460,7 +460,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                     } else if (i == messagePriorityRow || i == groupPriorityRow) {
                         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                         builder.setTitle(LocaleController.getString("NotificationsPriority", R.string.NotificationsPriority));
-                        builder.setItems(new CharSequence[]{
+                        builder.setItems(new CharSequence[] {
                                 LocaleController.getString("NotificationsPriorityDefault", R.string.NotificationsPriorityDefault),
                                 LocaleController.getString("NotificationsPriorityHigh", R.string.NotificationsPriorityHigh),
                                 LocaleController.getString("NotificationsPriorityMax", R.string.NotificationsPriorityMax)
@@ -483,7 +483,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                     } else if (i == repeatRow) {
                         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                         builder.setTitle(LocaleController.getString("RepeatNotifications", R.string.RepeatNotifications));
-                        builder.setItems(new CharSequence[]{
+                        builder.setItems(new CharSequence[] {
                                 LocaleController.getString("ShortMessageLifetimeForever", R.string.ShortMessageLifetimeForever),
                                 LocaleController.formatPluralString("Minutes", 5),
                                 LocaleController.formatPluralString("Minutes", 10),
@@ -524,7 +524,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                 }
             });
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -564,7 +564,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
             if (ringtone != null) {
                 Ringtone rng = RingtoneManager.getRingtone(getParentActivity(), ringtone);
                 if (rng != null) {
-                    if (ringtone.equals(Settings.System.DEFAULT_NOTIFICATION_URI)) {
+                    if(ringtone.equals(Settings.System.DEFAULT_NOTIFICATION_URI)) {
                         name = LocaleController.getString("Default", R.string.Default);
                     } else {
                         name = rng.getTitle(getParentActivity());
@@ -665,8 +665,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                 } else if (i == resetSectionRow) {
                     ((HeaderCell) view).setText(LocaleController.getString("Reset", R.string.Reset));
                 }
-            }
-            if (type == 1) {
+            } if (type == 1) {
                 if (view == null) {
                     view = new TextCheckCell(mContext);
                 }

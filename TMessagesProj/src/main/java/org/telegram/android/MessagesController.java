@@ -15,16 +15,16 @@ import android.os.Build;
 import android.text.Html;
 import android.util.SparseArray;
 
-import org.telegram.R;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.R;
 import org.telegram.messenger.RPCRequest;
 import org.telegram.messenger.TLObject;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
+import org.telegram.messenger.ApplicationLoader;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +35,59 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
 public class MessagesController implements NotificationCenter.NotificationCenterDelegate {
+
+    private ConcurrentHashMap<Integer, TLRPC.Chat> chats = new ConcurrentHashMap<Integer, TLRPC.Chat>(100, 1.0f, 2);
+    private ConcurrentHashMap<Integer, TLRPC.EncryptedChat> encryptedChats = new ConcurrentHashMap<Integer, TLRPC.EncryptedChat>(10, 1.0f, 2);
+    private ConcurrentHashMap<Integer, TLRPC.User> users = new ConcurrentHashMap<Integer, TLRPC.User>(100, 1.0f, 2);
+
+    public ArrayList<TLRPC.TL_dialog> dialogs = new ArrayList<TLRPC.TL_dialog>();
+    public ArrayList<TLRPC.TL_dialog> dialogsServerOnly = new ArrayList<TLRPC.TL_dialog>();
+    public ConcurrentHashMap<Long, TLRPC.TL_dialog> dialogs_dict = new ConcurrentHashMap<Long, TLRPC.TL_dialog>(100, 1.0f, 2);
+    public HashMap<Integer, MessageObject> dialogMessage = new HashMap<Integer, MessageObject>();
+    public ConcurrentHashMap<Long, ArrayList<PrintingUser>> printingUsers = new ConcurrentHashMap<Long, ArrayList<PrintingUser>>(20, 1.0f, 2);
+    public HashMap<Long, CharSequence> printingStrings = new HashMap<Long, CharSequence>();
+    public HashMap<Long, Boolean> sendingTypings = new HashMap<Long, Boolean>();
+    public ConcurrentHashMap<Integer, Integer> onlinePrivacy = new ConcurrentHashMap<Integer, Integer>(20, 1.0f, 2);
+    private int lastPrintingStringCount = 0;
+
+    public boolean loadingBlockedUsers = false;
+    public ArrayList<Integer> blockedUsers = new ArrayList<Integer>();
+
+    private ArrayList<TLRPC.Updates> updatesQueue = new ArrayList<TLRPC.Updates>();
+    private long updatesStartWaitTime = 0;
+    private ArrayList<Integer> loadingFullUsers = new ArrayList<Integer>();
+    private ArrayList<Integer> loadedFullUsers = new ArrayList<Integer>();
+    private ArrayList<Integer> loadingFullChats = new ArrayList<Integer>();
+    private ArrayList<Integer> loadedFullChats = new ArrayList<Integer>();
+
+    private boolean gettingNewDeleteTask = false;
+    private int currentDeletingTaskTime = 0;
+    private ArrayList<Integer> currentDeletingTaskMids = null;
+    private Runnable currentDeleteTaskRunnable = null;
+
+    public int totalDialogsCount = 0;
+    public boolean loadingDialogs = false;
+    public boolean dialogsEndReached = false;
+    public boolean gettingDifference = false;
+    public boolean gettingDifferenceAgain = false;
+    public boolean updatingState = false;
+    public boolean firstGettingTask = false;
+    public boolean registeringForPush = false;
+
+    private long lastStatusUpdateTime = 0;
+    private long statusRequest = 0;
+    private int statusSettingState = 0;
+    private boolean offlineSent = false;
+    private String uploadingAvatar = null;
+
+    public boolean enableJoined = true;
+    public int fontSize = AndroidUtilities.dp(16);
+    public int maxGroupCount = 200;
+    public int maxBroadcastCount = 100;
+
+    private class UserActionUpdates extends TLRPC.Updates {
+
+    }
 
     public static final int UPDATE_MASK_NAME = 1;
     public static final int UPDATE_MASK_AVATAR = 2;
@@ -48,48 +101,25 @@ public class MessagesController implements NotificationCenter.NotificationCenter
     public static final int UPDATE_MASK_SELECT_DIALOG = 512;
     public static final int UPDATE_MASK_PHONE = 1024;
     public static final int UPDATE_MASK_ALL = UPDATE_MASK_AVATAR | UPDATE_MASK_STATUS | UPDATE_MASK_NAME | UPDATE_MASK_CHAT_AVATAR | UPDATE_MASK_CHAT_NAME | UPDATE_MASK_CHAT_MEMBERS | UPDATE_MASK_USER_PRINT | UPDATE_MASK_USER_PHONE | UPDATE_MASK_READ_DIALOG_MESSAGE | UPDATE_MASK_PHONE;
+
+    public static class PrintingUser {
+        public long lastTime;
+        public int userId;
+    }
+
     private static volatile MessagesController Instance = null;
-    public ArrayList<TLRPC.TL_dialog> dialogs = new ArrayList<TLRPC.TL_dialog>();
-    public ArrayList<TLRPC.TL_dialog> dialogsServerOnly = new ArrayList<TLRPC.TL_dialog>();
-    public ConcurrentHashMap<Long, TLRPC.TL_dialog> dialogs_dict = new ConcurrentHashMap<Long, TLRPC.TL_dialog>(100, 1.0f, 2);
-    public HashMap<Integer, MessageObject> dialogMessage = new HashMap<Integer, MessageObject>();
-    public ConcurrentHashMap<Long, ArrayList<PrintingUser>> printingUsers = new ConcurrentHashMap<Long, ArrayList<PrintingUser>>(20, 1.0f, 2);
-    public HashMap<Long, CharSequence> printingStrings = new HashMap<Long, CharSequence>();
-    public HashMap<Long, Boolean> sendingTypings = new HashMap<Long, Boolean>();
-    public ConcurrentHashMap<Integer, Integer> onlinePrivacy = new ConcurrentHashMap<Integer, Integer>(20, 1.0f, 2);
-    public boolean loadingBlockedUsers = false;
-    public ArrayList<Integer> blockedUsers = new ArrayList<Integer>();
-    public int totalDialogsCount = 0;
-    public boolean loadingDialogs = false;
-    public boolean dialogsEndReached = false;
-    public boolean gettingDifference = false;
-    public boolean gettingDifferenceAgain = false;
-    public boolean updatingState = false;
-    public boolean firstGettingTask = false;
-    public boolean registeringForPush = false;
-    public boolean enableJoined = true;
-    public int fontSize = AndroidUtilities.dp(16);
-    public int maxGroupCount = 200;
-    public int maxBroadcastCount = 100;
-    private ConcurrentHashMap<Integer, TLRPC.Chat> chats = new ConcurrentHashMap<Integer, TLRPC.Chat>(100, 1.0f, 2);
-    private ConcurrentHashMap<Integer, TLRPC.EncryptedChat> encryptedChats = new ConcurrentHashMap<Integer, TLRPC.EncryptedChat>(10, 1.0f, 2);
-    private ConcurrentHashMap<Integer, TLRPC.User> users = new ConcurrentHashMap<Integer, TLRPC.User>(100, 1.0f, 2);
-    private int lastPrintingStringCount = 0;
-    private ArrayList<TLRPC.Updates> updatesQueue = new ArrayList<TLRPC.Updates>();
-    private long updatesStartWaitTime = 0;
-    private ArrayList<Integer> loadingFullUsers = new ArrayList<Integer>();
-    private ArrayList<Integer> loadedFullUsers = new ArrayList<Integer>();
-    private ArrayList<Integer> loadingFullChats = new ArrayList<Integer>();
-    private ArrayList<Integer> loadedFullChats = new ArrayList<Integer>();
-    private boolean gettingNewDeleteTask = false;
-    private int currentDeletingTaskTime = 0;
-    private ArrayList<Integer> currentDeletingTaskMids = null;
-    private Runnable currentDeleteTaskRunnable = null;
-    private long lastStatusUpdateTime = 0;
-    private long statusRequest = 0;
-    private int statusSettingState = 0;
-    private boolean offlineSent = false;
-    private String uploadingAvatar = null;
+    public static MessagesController getInstance() {
+        MessagesController localInstance = Instance;
+        if (localInstance == null) {
+            synchronized (MessagesController.class) {
+                localInstance = Instance;
+                if (localInstance == null) {
+                    Instance = localInstance = new MessagesController();
+                }
+            }
+        }
+        return localInstance;
+    }
 
     public MessagesController() {
         ImageLoader.getInstance();
@@ -107,37 +137,6 @@ public class MessagesController implements NotificationCenter.NotificationCenter
         maxGroupCount = preferences.getInt("maxGroupCount", 200);
         maxBroadcastCount = preferences.getInt("maxBroadcastCount", 100);
         fontSize = preferences.getInt("fons_size", AndroidUtilities.isTablet() ? 18 : 16);
-    }
-
-    public static MessagesController getInstance() {
-        MessagesController localInstance = Instance;
-        if (localInstance == null) {
-            synchronized (MessagesController.class) {
-                localInstance = Instance;
-                if (localInstance == null) {
-                    Instance = localInstance = new MessagesController();
-                }
-            }
-        }
-        return localInstance;
-    }
-
-    public static TLRPC.InputUser getInputUser(TLRPC.User user) {
-        if (user == null) {
-            return null;
-        }
-        TLRPC.InputUser inputUser = null;
-        if (user.id == UserConfig.getClientUserId()) {
-            inputUser = new TLRPC.TL_inputUserSelf();
-        } else if (user instanceof TLRPC.TL_userForeign || user instanceof TLRPC.TL_userRequest) {
-            inputUser = new TLRPC.TL_inputUserForeign();
-            inputUser.user_id = user.id;
-            inputUser.access_hash = user.access_hash;
-        } else {
-            inputUser = new TLRPC.TL_inputUserContact();
-            inputUser.user_id = user.id;
-        }
-        return inputUser;
     }
 
     public void updateConfig(final TLRPC.TL_config config) {
@@ -173,6 +172,24 @@ public class MessagesController implements NotificationCenter.NotificationCenter
         user.status = null;
         user.photo = new TLRPC.TL_userProfilePhotoEmpty();
         putUser(user, true);
+    }
+
+    public static TLRPC.InputUser getInputUser(TLRPC.User user) {
+        if (user == null) {
+            return null;
+        }
+        TLRPC.InputUser inputUser = null;
+        if (user.id == UserConfig.getClientUserId()) {
+            inputUser = new TLRPC.TL_inputUserSelf();
+        } else if (user instanceof TLRPC.TL_userForeign || user instanceof TLRPC.TL_userRequest) {
+            inputUser = new TLRPC.TL_inputUserForeign();
+            inputUser.user_id = user.id;
+            inputUser.access_hash = user.access_hash;
+        } else {
+            inputUser = new TLRPC.TL_inputUserContact();
+            inputUser.user_id = user.id;
+        }
+        return inputUser;
     }
 
     @Override
@@ -3583,14 +3600,5 @@ public class MessagesController implements NotificationCenter.NotificationCenter
                 }
             }
         }
-    }
-
-    public static class PrintingUser {
-        public long lastTime;
-        public int userId;
-    }
-
-    private class UserActionUpdates extends TLRPC.Updates {
-
     }
 }

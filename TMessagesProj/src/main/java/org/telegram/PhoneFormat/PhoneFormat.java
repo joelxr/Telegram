@@ -35,8 +35,8 @@ import java.util.HashMap;
 import java.util.Locale;
 
 public class PhoneFormat {
-    private static volatile PhoneFormat Instance = null;
     public byte[] data;
+    private boolean initialzed = false;
     public ByteBuffer buffer;
     public String defaultCountry;
     public String defaultCallingCode;
@@ -44,15 +44,8 @@ public class PhoneFormat {
     public HashMap<String, ArrayList<String>> callingCodeCountries;
     public HashMap<String, CallingCodeInfo> callingCodeData;
     public HashMap<String, String> countryCallingCode;
-    private boolean initialzed = false;
-    public PhoneFormat() {
-        init(null);
-    }
 
-    public PhoneFormat(String countryCode) {
-        init(countryCode);
-    }
-
+    private static volatile PhoneFormat Instance = null;
     public static PhoneFormat getInstance() {
         PhoneFormat localInstance = Instance;
         if (localInstance == null) {
@@ -93,6 +86,14 @@ public class PhoneFormat {
 
     public static String stripExceptNumbers(String str) {
         return stripExceptNumbers(str, false);
+    }
+
+    public PhoneFormat() {
+        init(null);
+    }
+
+    public PhoneFormat(String countryCode) {
+        init(countryCode);
     }
 
     public void init(String countryCode) {

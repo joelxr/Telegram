@@ -20,9 +20,13 @@ import org.telegram.messenger.FileLog;
 
 public class SizeNotifierRelativeLayout extends RelativeLayout {
 
-    public SizeNotifierRelativeLayoutDelegate delegate;
     private Rect rect = new Rect();
     private Drawable backgroundDrawable;
+    public SizeNotifierRelativeLayoutDelegate delegate;
+
+    public abstract interface SizeNotifierRelativeLayoutDelegate {
+        public abstract void onSizeChanged(int keyboardHeight);
+    }
 
     public SizeNotifierRelativeLayout(Context context) {
         super(context);
@@ -44,12 +48,12 @@ public class SizeNotifierRelativeLayout extends RelativeLayout {
         }
     }
 
-    public Drawable getBackgroundImage() {
-        return backgroundDrawable;
-    }
-
     public void setBackgroundImage(Drawable bitmap) {
         backgroundDrawable = bitmap;
+    }
+
+    public Drawable getBackgroundImage() {
+        return backgroundDrawable;
     }
 
     @Override
@@ -67,11 +71,11 @@ public class SizeNotifierRelativeLayout extends RelativeLayout {
     @Override
     protected void onDraw(Canvas canvas) {
         if (backgroundDrawable != null) {
-            float scaleX = (float) getMeasuredWidth() / (float) backgroundDrawable.getIntrinsicWidth();
-            float scaleY = (float) getMeasuredHeight() / (float) backgroundDrawable.getIntrinsicHeight();
+            float scaleX = (float)getMeasuredWidth() / (float)backgroundDrawable.getIntrinsicWidth();
+            float scaleY = (float)getMeasuredHeight() / (float)backgroundDrawable.getIntrinsicHeight();
             float scale = scaleX < scaleY ? scaleY : scaleX;
-            int width = (int) Math.ceil(backgroundDrawable.getIntrinsicWidth() * scale);
-            int height = (int) Math.ceil(backgroundDrawable.getIntrinsicHeight() * scale);
+            int width = (int)Math.ceil(backgroundDrawable.getIntrinsicWidth() * scale);
+            int height = (int)Math.ceil(backgroundDrawable.getIntrinsicHeight() * scale);
             int x = (getMeasuredWidth() - width) / 2;
             int y = (getMeasuredHeight() - height) / 2;
             backgroundDrawable.setBounds(x, y, x + width, y + height);
@@ -79,9 +83,5 @@ public class SizeNotifierRelativeLayout extends RelativeLayout {
         } else {
             super.onDraw(canvas);
         }
-    }
-
-    public abstract interface SizeNotifierRelativeLayoutDelegate {
-        public abstract void onSizeChanged(int keyboardHeight);
     }
 }

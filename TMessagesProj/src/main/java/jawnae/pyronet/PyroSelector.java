@@ -32,14 +32,15 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class PyroSelector {
-    public static final int BUFFER_SIZE = 64 * 1024;
     public static boolean DO_NOT_CHECK_NETWORK_THREAD = true;
-    final Selector nioSelector;
-    final ByteBuffer networkBuffer;
-    Thread networkThread;
-    private BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
 
-    //
+    public static final int BUFFER_SIZE = 64 * 1024;
+
+    Thread networkThread;
+
+    final Selector nioSelector;
+
+    final ByteBuffer networkBuffer;
 
     public PyroSelector() {
         this.networkBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -52,6 +53,8 @@ public class PyroSelector {
 
         this.networkThread = Thread.currentThread();
     }
+
+    //
 
     public final boolean isNetworkThread() {
         return DO_NOT_CHECK_NETWORK_THREAD || networkThread == Thread.currentThread();
@@ -150,8 +153,6 @@ public class PyroSelector {
         }
     }
 
-    //
-
     public void spawnNetworkThread(final String name) {
         // now no thread can access this selector
         //
@@ -188,6 +189,10 @@ public class PyroSelector {
             }
         }, name).start();
     }
+
+    //
+
+    private BlockingQueue<Runnable> tasks = new LinkedBlockingQueue<Runnable>();
 
     public void scheduleTask(Runnable task) {
         if (task == null) {

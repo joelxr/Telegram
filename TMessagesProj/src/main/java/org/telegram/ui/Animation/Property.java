@@ -20,13 +20,13 @@ public abstract class Property<T, V> {
     private final String mName;
     private final Class<V> mType;
 
+    public static <T, V> Property<T, V> of(Class<T> hostType, Class<V> valueType, String name) {
+        return new ReflectiveProperty<T, V>(hostType, valueType, name);
+    }
+
     public Property(Class<V> type, String name) {
         mName = name;
         mType = type;
-    }
-
-    public static <T, V> Property<T, V> of(Class<T> hostType, Class<V> valueType, String name) {
-        return new ReflectiveProperty<T, V>(hostType, valueType, name);
     }
 
     public boolean isReadOnly() {
@@ -34,7 +34,7 @@ public abstract class Property<T, V> {
     }
 
     public void set(T object, V value) {
-        throw new UnsupportedOperationException("Property " + getName() + " is read-only");
+        throw new UnsupportedOperationException("Property " + getName() +" is read-only");
     }
 
     public abstract V get(T object);

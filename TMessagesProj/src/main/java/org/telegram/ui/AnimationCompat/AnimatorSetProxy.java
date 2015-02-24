@@ -25,14 +25,6 @@ public class AnimatorSetProxy {
 
     private Object animatorSet;
 
-    public AnimatorSetProxy() {
-        if (View10.NEED_PROXY) {
-            animatorSet = new AnimatorSet10();
-        } else {
-            animatorSet = new AnimatorSet();
-        }
-    }
-
     public static <T, U> T[] copyOf(U[] original, int newLength, Class<? extends T[]> newType) {
         return copyOfRange(original, 0, newLength, newType);
     }
@@ -53,6 +45,14 @@ public class AnimatorSetProxy {
         return result;
     }
 
+    public AnimatorSetProxy() {
+        if (View10.NEED_PROXY) {
+            animatorSet = new AnimatorSet10();
+        } else {
+            animatorSet = new AnimatorSet();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public void playTogether(Object... items) {
         if (View10.NEED_PROXY) {
@@ -68,13 +68,13 @@ public class AnimatorSetProxy {
         if (View10.NEED_PROXY) {
             ArrayList<Animator10> animators = new ArrayList<Animator10>();
             for (Object obj : items) {
-                animators.add((Animator10) obj);
+                animators.add((Animator10)obj);
             }
             ((AnimatorSet10) animatorSet).playTogether(animators);
         } else {
             ArrayList<Animator> animators = new ArrayList<Animator>();
             for (Object obj : items) {
-                animators.add((Animator) obj);
+                animators.add((Animator)obj);
             }
             ((AnimatorSet) animatorSet).playTogether(animators);
         }

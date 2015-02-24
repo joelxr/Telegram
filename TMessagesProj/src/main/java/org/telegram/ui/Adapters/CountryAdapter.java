@@ -14,8 +14,8 @@ import android.view.ViewGroup;
 
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.ui.Cells.DividerCell;
 import org.telegram.ui.Cells.LetterSectionCell;
 import org.telegram.ui.Cells.TextSettingsCell;
@@ -30,9 +30,16 @@ import java.util.HashMap;
 
 public class CountryAdapter extends BaseSectionsAdapter {
 
+    public static class Country {
+        public String name;
+        public String code;
+        public String shortname;
+    }
+
     private Context mContext;
     private HashMap<String, ArrayList<Country>> countries = new HashMap<String, ArrayList<Country>>();
     private ArrayList<String> sortedCountries = new ArrayList<String>();
+
     public CountryAdapter(Context context) {
         mContext = context;
 
@@ -154,11 +161,5 @@ public class CountryAdapter extends BaseSectionsAdapter {
     @Override
     public int getViewTypeCount() {
         return 2;
-    }
-
-    public static class Country {
-        public String name;
-        public String code;
-        public String shortname;
     }
 }

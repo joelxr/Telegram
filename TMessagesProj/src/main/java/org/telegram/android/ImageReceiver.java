@@ -20,8 +20,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 
-import org.telegram.messenger.FileLog;
 import org.telegram.messenger.TLRPC;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.Utilities;
 
 public class ImageReceiver {
@@ -327,9 +327,9 @@ public class ImageReceiver {
 
     public Bitmap getBitmap() {
         if (currentImage != null && currentImage instanceof BitmapDrawable) {
-            return ((BitmapDrawable) currentImage).getBitmap();
+            return ((BitmapDrawable)currentImage).getBitmap();
         } else if (isPlaceholder && last_placeholder != null && last_placeholder instanceof BitmapDrawable) {
-            return ((BitmapDrawable) last_placeholder).getBitmap();
+            return ((BitmapDrawable)last_placeholder).getBitmap();
         }
         return null;
     }
@@ -411,10 +411,6 @@ public class ImageReceiver {
         forcePreview = value;
     }
 
-    public int getRoundRadius() {
-        return roundRadius;
-    }
-
     public void setRoundRadius(int value) {
         roundRadius = value;
         if (roundRadius != 0) {
@@ -430,5 +426,9 @@ public class ImageReceiver {
             shaderMatrix = null;
             bitmapRect = null;
         }
+    }
+
+    public int getRoundRadius() {
+        return roundRadius;
     }
 }

@@ -26,7 +26,7 @@ public class SmsListener extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED")) {
+        if(intent.getAction().equals("android.provider.Telephony.SMS_RECEIVED")) {
             if (!AndroidUtilities.isWaitingForSms()) {
                 return;
             }
@@ -37,8 +37,8 @@ public class SmsListener extends BroadcastReceiver {
                     Object[] pdus = (Object[]) bundle.get("pdus");
                     msgs = new SmsMessage[pdus.length];
                     String wholeString = "";
-                    for (int i = 0; i < msgs.length; i++) {
-                        msgs[i] = SmsMessage.createFromPdu((byte[]) pdus[i]);
+                    for(int i = 0; i < msgs.length; i++){
+                        msgs[i] = SmsMessage.createFromPdu((byte[])pdus[i]);
                         wholeString += msgs[i].getMessageBody();
                     }
 
@@ -55,7 +55,7 @@ public class SmsListener extends BroadcastReceiver {
                         FileLog.e("tmessages", e);
                     }
 
-                } catch (Exception e) {
+                } catch(Exception e) {
                     FileLog.e("tmessages", e);
                 }
             }

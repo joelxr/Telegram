@@ -17,19 +17,20 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import org.telegram.R;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLog;
+import org.telegram.R;
 
 public class BaseFragment {
+    private boolean isFinished = false;
+    private AlertDialog visibleDialog = null;
+
     protected View fragmentView;
     protected ActionBarLayout parentLayout;
     protected ActionBar actionBar;
     protected int classGuid = 0;
     protected Bundle arguments;
     protected boolean swipeBackEnabled = true;
-    private boolean isFinished = false;
-    private AlertDialog visibleDialog = null;
 
     public BaseFragment() {
         classGuid = ConnectionsManager.getInstance().generateClassGuid();

@@ -19,11 +19,11 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 
 public class FileUploadOperation {
-    public int state = 0;
-    public FileUploadOperationDelegate delegate;
     private int uploadChunkSize = 1024 * 32;
     private String uploadingFilePath;
+    public int state = 0;
     private byte[] readBuffer;
+    public FileUploadOperationDelegate delegate;
     private long requestToken = 0;
     private int currentPartNum = 0;
     private long currentFileId;
@@ -44,6 +44,12 @@ public class FileUploadOperation {
     private FileInputStream stream;
     private MessageDigest mdEnc = null;
     private boolean started = false;
+
+    public static interface FileUploadOperationDelegate {
+        public abstract void didFinishUploadingFile(FileUploadOperation operation, TLRPC.InputFile inputFile, TLRPC.InputEncryptedFile inputEncryptedFile);
+        public abstract void didFailedUploadingFile(FileUploadOperation operation);
+        public abstract void didChangedUploadProgress(FileUploadOperation operation, float progress);
+    }
 
     public FileUploadOperation(String location, boolean encrypted, int estimated) {
         uploadingFilePath = location;
@@ -386,11 +392,5 @@ public class FileUploadOperation {
                 }
             }
         }, null, true, RPCRequest.RPCRequestClassUploadMedia, ConnectionsManager.DEFAULT_DATACENTER_ID);
-    }
-
-    public static interface FileUploadOperationDelegate {
-        public abstract void didFinishUploadingFile(FileUploadOperation operation, TLRPC.InputFile inputFile, TLRPC.InputEncryptedFile inputEncryptedFile);
-        public abstract void didFailedUploadingFile(FileUploadOperation operation);
-        public abstract void didChangedUploadProgress(FileUploadOperation operation, float progress);
     }
 }

@@ -28,24 +28,24 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.android.LocaleController;
-import org.telegram.android.MessagesController;
-import org.telegram.android.MessagesStorage;
-import org.telegram.android.NotificationCenter;
 import org.telegram.messenger.ConnectionsManager;
-import org.telegram.messenger.FileLog;
+import org.telegram.android.LocaleController;
+import org.telegram.android.MessagesStorage;
 import org.telegram.messenger.TLRPC;
-import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.ActionBarMenu;
-import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.messenger.FileLog;
+import org.telegram.android.MessagesController;
+import org.telegram.android.NotificationCenter;
+import org.telegram.R;
 import org.telegram.ui.Adapters.BaseFragmentAdapter;
 import org.telegram.ui.Cells.GreySectionCell;
 import org.telegram.ui.Cells.UserCell;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.AvatarUpdater;
 import org.telegram.ui.Components.BackupImageView;
+import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.Components.FrameLayoutFixed;
 
 import java.util.ArrayList;
@@ -53,7 +53,6 @@ import java.util.concurrent.Semaphore;
 
 public class GroupCreateFinalActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, AvatarUpdater.AvatarUpdaterDelegate {
 
-    private final static int done_button = 1;
     private ListAdapter listAdapter;
     private ListView listView;
     private EditText nameTextView;
@@ -68,6 +67,8 @@ public class GroupCreateFinalActivity extends BaseFragment implements Notificati
     private ProgressDialog progressDialog = null;
     private String nameToSet = null;
     private boolean isBroadcast = false;
+
+    private final static int done_button = 1;
 
     public GroupCreateFinalActivity(Bundle args) {
         super(args);
@@ -277,7 +278,7 @@ public class GroupCreateFinalActivity extends BaseFragment implements Notificati
             frameLayout.addView(nameTextView);
             layoutParams1 = (FrameLayout.LayoutParams) nameTextView.getLayoutParams();
             layoutParams1.width = FrameLayout.LayoutParams.MATCH_PARENT;
-            layoutParams1.height = FrameLayout.LayoutParams.WRAP_CONTENT;
+            layoutParams1.height =  FrameLayout.LayoutParams.WRAP_CONTENT;
             layoutParams1.leftMargin = LocaleController.isRTL ? AndroidUtilities.dp(16) : AndroidUtilities.dp(96);
             layoutParams1.rightMargin = LocaleController.isRTL ? AndroidUtilities.dp(96) : AndroidUtilities.dp(16);
             layoutParams1.gravity = Gravity.CENTER_VERTICAL;
@@ -317,7 +318,7 @@ public class GroupCreateFinalActivity extends BaseFragment implements Notificati
             layoutParams.height = LinearLayout.LayoutParams.MATCH_PARENT;
             listView.setLayoutParams(layoutParams);
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
@@ -377,7 +378,7 @@ public class GroupCreateFinalActivity extends BaseFragment implements Notificati
     @Override
     public void didReceivedNotification(int id, final Object... args) {
         if (id == NotificationCenter.updateInterfaces) {
-            int mask = (Integer) args[0];
+            int mask = (Integer)args[0];
             if ((mask & MessagesController.UPDATE_MASK_AVATAR) != 0 || (mask & MessagesController.UPDATE_MASK_NAME) != 0 || (mask & MessagesController.UPDATE_MASK_STATUS) != 0) {
                 updateVisibleRows(mask);
             }
@@ -402,7 +403,7 @@ public class GroupCreateFinalActivity extends BaseFragment implements Notificati
                         }
                     }
                     Bundle args2 = new Bundle();
-                    args2.putInt("chat_id", (Integer) args[0]);
+                    args2.putInt("chat_id", (Integer)args[0]);
                     presentFragment(new ChatActivity(args2), true);
                 }
             });

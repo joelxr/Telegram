@@ -25,13 +25,13 @@ import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.DispatchQueue;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
+import org.telegram.messenger.ApplicationLoader;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -50,8 +50,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ImageLoader {
 
-    private static volatile ImageLoader Instance = null;
-    protected VMRuntimeHack runtimeHack = null;
     private HashMap<String, Integer> bitmapUseCounts = new HashMap<String, Integer>();
     private LruCache memCache;
     private ConcurrentHashMap<String, CacheImage> imageLoadingByUrl = new ConcurrentHashMap<String, CacheImage>();
@@ -60,11 +58,423 @@ public class ImageLoader {
     private LinkedList<HttpTask> httpTasks = new LinkedList<HttpTask>();
     private DispatchQueue cacheOutQueue = new DispatchQueue("cacheOutQueue");
     private int currentHttpTasksCount = 0;
+
+    protected VMRuntimeHack runtimeHack = null;
     private String ignoreRemoval = null;
+
     private volatile long lastCacheOutTime = 0;
     private int lastImageNum = 0;
     private long lastProgressUpdateTime = 0;
+
     private File telegramPath = null;
+
+    private class HttpTask extends AsyncTask<Void, Void, Boolean> {
+
+        private CacheImage cacheImage = null;
+        private RandomAccessFile fileOutputStream = null;
+
+        public HttpTask(CacheImage cacheImage) {
+            this.cacheImage = cacheImage;
+        }
+
+        protected Boolean doInBackground(Void... voids) {
+            InputStream httpConnectionStream = null;
+            boolean done = false;
+
+            try {
+                URL downloadUrl = new URL(cacheImage.httpUrl);
+                URLConnection httpConnection = downloadUrl.openConnection();
+                httpConnection.setConnectTimeout(5000);
+                httpConnection.setReadTimeout(5000);
+                httpConnection.connect();
+                httpConnectionStream = httpConnection.getInputStream();
+
+                fileOutputStream = new RandomAccessFile(cacheImage.tempFilePath, "rws");
+            } catch (Throwable e) {
+                FileLog.e("tmessages", e);
+            }
+
+            try {
+                byte[] data = new byte[1024 * 2];
+                while (true) {
+                    if (isCancelled()) {
+                        break;
+                    }
+                    try {
+                        int readed = httpConnectionStream.read(data);
+                        if (readed > 0) {
+                            fileOutputStream.write(data, 0, readed);
+                        } else if (readed == -1) {
+                            done = true;
+                            break;
+                        } else {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        FileLog.e("tmessages", e);
+                        break;
+                    }
+                }
+            } catch (Throwable e) {
+                FileLog.e("tmessages", e);
+            }
+
+            try {
+                if (fileOutputStream != null) {
+                    fileOutputStream.close();
+                    fileOutputStream = null;
+                }
+            } catch (Throwable e) {
+                FileLog.e("tmessages", e);
+            }
+
+            try {
+                if (httpConnectionStream != null) {
+                    httpConnectionStream.close();
+                }
+                httpConnectionStream = null;
+            } catch (Throwable e) {
+                FileLog.e("tmessages", e);
+            }
+
+            if (done) {
+                if (cacheImage.tempFilePath != null) {
+                    cacheImage.tempFilePath.renameTo(cacheImage.finalFilePath);
+                }
+            }
+
+            return done;
+        }
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            fileDidLoaded(cacheImage.url, cacheImage.finalFilePath, cacheImage.tempFilePath);
+            runHttpTasks(true);
+        }
+
+        @Override
+        protected void onCancelled() {
+            runHttpTasks(true);
+        }
+    }
+
+    private class CacheOutTask implements Runnable {
+        private Thread runningThread = null;
+        private final Object sync = new Object();
+
+        private CacheImage cacheImage = null;
+        private boolean isCancelled = false;
+
+        public CacheOutTask(CacheImage cacheImage) {
+            this.cacheImage = cacheImage;
+        }
+
+        @Override
+        public void run() {
+            synchronized (sync) {
+                runningThread = Thread.currentThread();
+                Thread.interrupted();
+                if (isCancelled) {
+                    return;
+                }
+            }
+
+            Long mediaId = null;
+            Bitmap image = null;
+            File cacheFileFinal = null;
+            boolean canDeleteFile = true;
+
+            if (cacheImage.finalFilePath != null && cacheImage.finalFilePath.exists()) {
+                cacheFileFinal = cacheImage.finalFilePath;
+            } else if (cacheImage.tempFilePath != null && cacheImage.tempFilePath.exists()) {
+                cacheFileFinal = cacheImage.tempFilePath;
+            } else if (cacheImage.finalFilePath != null) {
+                cacheFileFinal = cacheImage.finalFilePath;
+            }
+
+            try {
+                if (cacheImage.httpUrl != null) {
+                    if (cacheImage.httpUrl.startsWith("thumb://")) {
+                        int idx = cacheImage.httpUrl.indexOf(":", 8);
+                        if (idx >= 0) {
+                            mediaId = Long.parseLong(cacheImage.httpUrl.substring(8, idx));
+                        }
+                        canDeleteFile = false;
+                    } else if (!cacheImage.httpUrl.startsWith("http")) {
+                        canDeleteFile = false;
+                    }
+                }
+
+                int delay = 20;
+                if (runtimeHack != null) {
+                    delay = 60;
+                }
+                if (mediaId != null) {
+                    delay = 0;
+                }
+                if (delay != 0 && lastCacheOutTime != 0 && lastCacheOutTime > System.currentTimeMillis() - delay) {
+                    Thread.sleep(delay);
+                }
+                lastCacheOutTime = System.currentTimeMillis();
+                synchronized (sync) {
+                    if (isCancelled) {
+                        return;
+                    }
+                }
+
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+
+                float w_filter = 0;
+                float h_filter = 0;
+                boolean blur = false;
+                if (cacheImage.filter != null) {
+                    String args[] = cacheImage.filter.split("_");
+                    w_filter = Float.parseFloat(args[0]) * AndroidUtilities.density;
+                    h_filter = Float.parseFloat(args[1]) * AndroidUtilities.density;
+                    if (args.length > 2) {
+                        blur = true;
+                    }
+                    opts.inJustDecodeBounds = true;
+
+                    if (mediaId != null) {
+                        MediaStore.Images.Thumbnails.getThumbnail(ApplicationLoader.applicationContext.getContentResolver(), mediaId, MediaStore.Images.Thumbnails.MINI_KIND, opts);
+                    } else {
+                        if (cacheImage.finalFilePath != null && cacheImage.finalFilePath.exists()) {
+                            BitmapFactory.decodeFile(cacheImage.finalFilePath.getAbsolutePath(), opts);
+                        } else if (cacheImage.tempFilePath != null && cacheImage.tempFilePath.exists()) {
+                            BitmapFactory.decodeFile(cacheImage.tempFilePath.getAbsolutePath(), opts);
+                        }
+                    }
+
+                    float photoW = opts.outWidth;
+                    float photoH = opts.outHeight;
+                    float scaleFactor = Math.max(photoW / w_filter, photoH / h_filter);
+                    if (scaleFactor < 1) {
+                        scaleFactor = 1;
+                    }
+                    opts.inJustDecodeBounds = false;
+                    opts.inSampleSize = (int)scaleFactor;
+                }
+                synchronized (sync) {
+                    if (isCancelled) {
+                        return;
+                    }
+                }
+
+                if (cacheImage.filter == null || blur) {
+                    opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                } else {
+                    opts.inPreferredConfig = Bitmap.Config.RGB_565;
+                }
+                opts.inDither = false;
+                if (mediaId != null) {
+                    image = MediaStore.Images.Thumbnails.getThumbnail(ApplicationLoader.applicationContext.getContentResolver(), mediaId, MediaStore.Images.Thumbnails.MINI_KIND, null);
+                }
+                if (image == null) {
+                    FileInputStream is = new FileInputStream(cacheFileFinal);
+                    image = BitmapFactory.decodeStream(is, null, opts);
+                    is.close();
+                }
+                if (image == null) {
+                    if (canDeleteFile && (cacheFileFinal.length() == 0 || cacheImage.filter == null)) {
+                        cacheFileFinal.delete();
+                    }
+                } else {
+                    if (cacheImage.filter != null) {
+                        float bitmapW = image.getWidth();
+                        float bitmapH = image.getHeight();
+                        if (bitmapW != w_filter && bitmapW > w_filter) {
+                            float scaleFactor = bitmapW / w_filter;
+                            Bitmap scaledBitmap = Bitmap.createScaledBitmap(image, (int)w_filter, (int)(bitmapH / scaleFactor), true);
+                            if (image != scaledBitmap) {
+                                image.recycle();
+                                image = scaledBitmap;
+                            }
+                        }
+                        if (image != null && blur && bitmapH < 100 && bitmapW < 100) {
+                            Utilities.blurBitmap(image, 3);
+                        }
+                    }
+                    if (runtimeHack != null) {
+                        runtimeHack.trackFree(image.getRowBytes() * image.getHeight());
+                    }
+                }
+            } catch (Throwable e) {
+                //don't promt
+            }
+            Thread.interrupted();
+            onPostExecute(image != null ? new BitmapDrawable(image) : null);
+        }
+
+        private void onPostExecute(final BitmapDrawable bitmapDrawable) {
+            AndroidUtilities.runOnUIThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (bitmapDrawable != null && memCache.get(cacheImage.key) == null) {
+                        memCache.put(cacheImage.key, bitmapDrawable);
+                    }
+                    cacheImage.setImageAndClear(bitmapDrawable);
+                }
+            });
+        }
+
+        public void cancel() {
+            synchronized (sync) {
+                try {
+                    isCancelled = true;
+                    if (runningThread != null) {
+                        runningThread.interrupt();
+                    }
+                } catch (Exception e) {
+                    //don't promt
+                }
+            }
+        }
+    }
+
+    public class VMRuntimeHack {
+        private Object runtime = null;
+        private Method trackAllocation = null;
+        private Method trackFree = null;
+
+        public boolean trackAlloc(long size) {
+            if (runtime == null) {
+                return false;
+            }
+            try {
+                Object res = trackAllocation.invoke(runtime, size);
+                return (res instanceof Boolean) ? (Boolean)res : true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        public boolean trackFree(long size) {
+            if (runtime == null) {
+                return false;
+            }
+            try {
+                Object res = trackFree.invoke(runtime, size);
+                return (res instanceof Boolean) ? (Boolean)res : true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        public VMRuntimeHack() {
+            try {
+                Class cl = Class.forName("dalvik.system.VMRuntime");
+                Method getRt = cl.getMethod("getRuntime", new Class[0]);
+                Object[] objects = new Object[0];
+                runtime = getRt.invoke(null, objects);
+                trackAllocation = cl.getMethod("trackExternalAllocation", new Class[] {long.class});
+                trackFree = cl.getMethod("trackExternalFree", new Class[] {long.class});
+            } catch (Exception e) {
+                FileLog.e("tmessages", e);
+                runtime = null;
+                trackAllocation = null;
+                trackFree = null;
+            }
+        }
+    }
+
+    private class CacheImage {
+        protected String key = null;
+        protected String url = null;
+        protected String filter = null;
+        protected TLRPC.FileLocation fileLocation = null;
+        protected String httpUrl = null;
+        protected File finalFilePath = null;
+        protected File tempFilePath = null;
+        protected CacheOutTask cacheTask;
+        protected HttpTask httpTask;
+        protected ArrayList<ImageReceiver> imageViewArray = new ArrayList<ImageReceiver>();
+
+        public void addImageView(ImageReceiver imageView) {
+            boolean exist = false;
+            for (ImageReceiver v : imageViewArray) {
+                if (v == imageView) {
+                    exist = true;
+                    break;
+                }
+            }
+            if (!exist) {
+                imageViewArray.add(imageView);
+                imageLoadingByTag.put(imageView.getTag(), this);
+            }
+        }
+
+        public void removeImageView(ImageReceiver imageView) {
+            for (int a = 0; a < imageViewArray.size(); a++) {
+                ImageReceiver obj = imageViewArray.get(a);
+                if (obj == null || obj == imageView) {
+                    imageViewArray.remove(a);
+                    if (obj != null) {
+                        imageLoadingByTag.remove(obj.getTag());
+                    }
+                    a--;
+                }
+            }
+
+            if (imageViewArray.size() == 0) {
+                cancelAndClear();
+            }
+        }
+
+        public void setImageAndClear(BitmapDrawable image) {
+            if (image != null) {
+                for (ImageReceiver imgView : imageViewArray) {
+                    imgView.setImageBitmap(image, key);
+                }
+            }
+            clear();
+        }
+
+        public void cancelAndClear() {
+            if (fileLocation != null) {
+                FileLoader.getInstance().cancelLoadFile(fileLocation);
+            }
+            if (cacheTask != null) {
+                cacheOutQueue.cancelRunnable(cacheTask);
+                cacheTask.cancel();
+                cacheTask = null;
+            }
+            if (httpTask != null) {
+                httpTasks.remove(httpTask);
+                httpTask.cancel(true);
+                httpTask = null;
+            }
+            clear();
+        }
+
+        private void clear() {
+            for (ImageReceiver imageReceiver : imageViewArray) {
+                imageLoadingByTag.remove(imageReceiver.getTag());
+            }
+            imageViewArray.clear();
+            if (url != null) {
+                imageLoadingByUrl.remove(url);
+            }
+            if (key != null) {
+                imageLoadingByKeys.remove(key);
+            }
+        }
+    }
+
+    private static volatile ImageLoader Instance = null;
+    public static ImageLoader getInstance() {
+        ImageLoader localInstance = Instance;
+        if (localInstance == null) {
+            synchronized (ImageLoader.class) {
+                localInstance = Instance;
+                if (localInstance == null) {
+                    Instance = localInstance = new ImageLoader();
+                }
+            }
+        }
+        return localInstance;
+    }
 
     public ImageLoader() {
         int cacheSize = Math.min(15, ((ActivityManager) ApplicationLoader.applicationContext.getSystemService(Context.ACTIVITY_SERVICE)).getMemoryClass() / 7) * 1024 * 1024;
@@ -77,13 +487,12 @@ public class ImageLoader {
             @Override
             protected int sizeOf(String key, BitmapDrawable bitmap) {
                 Bitmap b = bitmap.getBitmap();
-                if (Build.VERSION.SDK_INT < 12) {
+                if(Build.VERSION.SDK_INT < 12) {
                     return b.getRowBytes() * b.getHeight();
                 } else {
                     return b.getByteCount();
                 }
             }
-
             @Override
             protected void entryRemoved(boolean evicted, String key, BitmapDrawable oldBitmap, BitmapDrawable newBitmap) {
                 if (ignoreRemoval != null && key != null && ignoreRemoval.equals(key)) {
@@ -213,234 +622,6 @@ public class ImageLoader {
         ApplicationLoader.applicationContext.registerReceiver(receiver, filter);
 
         FileLoader.getInstance().setMediaDirs(createMediaPaths());
-    }
-
-    public static ImageLoader getInstance() {
-        ImageLoader localInstance = Instance;
-        if (localInstance == null) {
-            synchronized (ImageLoader.class) {
-                localInstance = Instance;
-                if (localInstance == null) {
-                    Instance = localInstance = new ImageLoader();
-                }
-            }
-        }
-        return localInstance;
-    }
-
-    public static Bitmap loadBitmap(String path, Uri uri, float maxWidth, float maxHeight) {
-        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-        bmOptions.inJustDecodeBounds = true;
-        FileDescriptor fileDescriptor = null;
-        ParcelFileDescriptor parcelFD = null;
-
-        if (path == null && uri != null && uri.getScheme() != null) {
-            String imageFilePath = null;
-            if (uri.getScheme().contains("file")) {
-                path = uri.getPath();
-            } else {
-                try {
-                    path = Utilities.getPath(uri);
-                } catch (Throwable e) {
-                    FileLog.e("tmessages", e);
-                }
-            }
-        }
-
-        if (path != null) {
-            BitmapFactory.decodeFile(path, bmOptions);
-        } else if (uri != null) {
-            boolean error = false;
-            try {
-                parcelFD = ApplicationLoader.applicationContext.getContentResolver().openFileDescriptor(uri, "r");
-                fileDescriptor = parcelFD.getFileDescriptor();
-                BitmapFactory.decodeFileDescriptor(fileDescriptor, null, bmOptions);
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-                try {
-                    if (parcelFD != null) {
-                        parcelFD.close();
-                    }
-                } catch (Throwable e2) {
-                    FileLog.e("tmessages", e2);
-                }
-                return null;
-            }
-        }
-        float photoW = bmOptions.outWidth;
-        float photoH = bmOptions.outHeight;
-        float scaleFactor = Math.max(photoW / maxWidth, photoH / maxHeight);
-        if (scaleFactor < 1) {
-            scaleFactor = 1;
-        }
-        bmOptions.inJustDecodeBounds = false;
-        bmOptions.inSampleSize = (int) scaleFactor;
-
-        String exifPath = null;
-        if (path != null) {
-            exifPath = path;
-        } else if (uri != null) {
-            exifPath = Utilities.getPath(uri);
-        }
-
-        Matrix matrix = null;
-
-        if (exifPath != null) {
-            ExifInterface exif;
-            try {
-                exif = new ExifInterface(exifPath);
-                int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1);
-                matrix = new Matrix();
-                switch (orientation) {
-                    case ExifInterface.ORIENTATION_ROTATE_90:
-                        matrix.postRotate(90);
-                        break;
-                    case ExifInterface.ORIENTATION_ROTATE_180:
-                        matrix.postRotate(180);
-                        break;
-                    case ExifInterface.ORIENTATION_ROTATE_270:
-                        matrix.postRotate(270);
-                        break;
-                }
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-            }
-        }
-
-        Bitmap b = null;
-        if (path != null) {
-            try {
-                b = BitmapFactory.decodeFile(path, bmOptions);
-                if (b != null) {
-                    b = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), matrix, true);
-                }
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-                ImageLoader.getInstance().clearMemory();
-                try {
-                    if (b == null) {
-                        b = BitmapFactory.decodeFile(path, bmOptions);
-                    }
-                    if (b != null) {
-                        b = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), matrix, true);
-                    }
-                } catch (Throwable e2) {
-                    FileLog.e("tmessages", e2);
-                }
-            }
-        } else if (uri != null) {
-            try {
-                b = BitmapFactory.decodeFileDescriptor(fileDescriptor, null, bmOptions);
-                if (b != null) {
-                    b = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), matrix, true);
-                }
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-            } finally {
-                try {
-                    if (parcelFD != null) {
-                        parcelFD.close();
-                    }
-                } catch (Throwable e) {
-                    FileLog.e("tmessages", e);
-                }
-            }
-        }
-
-        return b;
-    }
-
-    private static TLRPC.PhotoSize scaleAndSaveImageInternal(Bitmap bitmap, int w, int h, float photoW, float photoH, float scaleFactor, int quality, boolean cache, boolean scaleAnyway) throws Exception {
-        Bitmap scaledBitmap = null;
-        if (scaleFactor > 1 || scaleAnyway) {
-            scaledBitmap = Bitmap.createScaledBitmap(bitmap, w, h, true);
-        } else {
-            scaledBitmap = bitmap;
-        }
-
-        TLRPC.TL_fileLocation location = new TLRPC.TL_fileLocation();
-        location.volume_id = Integer.MIN_VALUE;
-        location.dc_id = Integer.MIN_VALUE;
-        location.local_id = UserConfig.lastLocalId;
-        UserConfig.lastLocalId--;
-        TLRPC.PhotoSize size;
-        if (!cache) {
-            size = new TLRPC.TL_photoSize();
-        } else {
-            size = new TLRPC.TL_photoCachedSize();
-        }
-        size.location = location;
-        size.w = scaledBitmap.getWidth();
-        size.h = scaledBitmap.getHeight();
-        if (size.w <= 100 && size.h <= 100) {
-            size.type = "s";
-        } else if (size.w <= 320 && size.h <= 320) {
-            size.type = "m";
-        } else if (size.w <= 800 && size.h <= 800) {
-            size.type = "x";
-        } else if (size.w <= 1280 && size.h <= 1280) {
-            size.type = "y";
-        } else {
-            size.type = "w";
-        }
-
-        if (!cache) {
-            String fileName = location.volume_id + "_" + location.local_id + ".jpg";
-            final File cacheFile = new File(FileLoader.getInstance().getDirectory(FileLoader.MEDIA_DIR_CACHE), fileName);
-            FileOutputStream stream = new FileOutputStream(cacheFile);
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream);
-            size.size = (int) stream.getChannel().size();
-        } else {
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream);
-            size.bytes = stream.toByteArray();
-            size.size = size.bytes.length;
-        }
-        if (scaledBitmap != bitmap) {
-            scaledBitmap.recycle();
-        }
-
-        return size;
-    }
-
-    public static TLRPC.PhotoSize scaleAndSaveImage(Bitmap bitmap, float maxWidth, float maxHeight, int quality, boolean cache) {
-        return scaleAndSaveImage(bitmap, maxWidth, maxHeight, quality, cache, 0, 0);
-    }
-
-    public static TLRPC.PhotoSize scaleAndSaveImage(Bitmap bitmap, float maxWidth, float maxHeight, int quality, boolean cache, int minWidth, int minHeight) {
-        if (bitmap == null) {
-            return null;
-        }
-        float photoW = bitmap.getWidth();
-        float photoH = bitmap.getHeight();
-        if (photoW == 0 || photoH == 0) {
-            return null;
-        }
-        boolean scaleAnyway = false;
-        float scaleFactor = Math.max(photoW / maxWidth, photoH / maxHeight);
-        if (scaleFactor < 1 && minWidth != 0 && minHeight != 0) {
-            scaleFactor = Math.max(photoW / minWidth, photoH / minHeight);
-            scaleAnyway = true;
-        }
-        int w = (int) (photoW / scaleFactor);
-        int h = (int) (photoH / scaleFactor);
-        if (h == 0 || w == 0) {
-            return null;
-        }
-
-        try {
-            return scaleAndSaveImageInternal(bitmap, w, h, photoW, photoH, scaleFactor, quality, cache, scaleAnyway);
-        } catch (Throwable e) {
-            FileLog.e("tmessages", e);
-            ImageLoader.getInstance().clearMemory();
-            System.gc();
-            try {
-                return scaleAndSaveImageInternal(bitmap, w, h, photoW, photoH, scaleFactor, quality, cache, scaleAnyway);
-            } catch (Throwable e2) {
-                FileLog.e("tmessages", e2);
-                return null;
-            }
-        }
     }
 
     private HashMap<Integer, File> createMediaPaths() {
@@ -814,395 +995,217 @@ public class ImageLoader {
         }
     }
 
-    private class HttpTask extends AsyncTask<Void, Void, Boolean> {
+    public static Bitmap loadBitmap(String path, Uri uri, float maxWidth, float maxHeight) {
+        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+        bmOptions.inJustDecodeBounds = true;
+        FileDescriptor fileDescriptor = null;
+        ParcelFileDescriptor parcelFD = null;
 
-        private CacheImage cacheImage = null;
-        private RandomAccessFile fileOutputStream = null;
-
-        public HttpTask(CacheImage cacheImage) {
-            this.cacheImage = cacheImage;
-        }
-
-        protected Boolean doInBackground(Void... voids) {
-            InputStream httpConnectionStream = null;
-            boolean done = false;
-
-            try {
-                URL downloadUrl = new URL(cacheImage.httpUrl);
-                URLConnection httpConnection = downloadUrl.openConnection();
-                httpConnection.setConnectTimeout(5000);
-                httpConnection.setReadTimeout(5000);
-                httpConnection.connect();
-                httpConnectionStream = httpConnection.getInputStream();
-
-                fileOutputStream = new RandomAccessFile(cacheImage.tempFilePath, "rws");
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-            }
-
-            try {
-                byte[] data = new byte[1024 * 2];
-                while (true) {
-                    if (isCancelled()) {
-                        break;
-                    }
-                    try {
-                        int readed = httpConnectionStream.read(data);
-                        if (readed > 0) {
-                            fileOutputStream.write(data, 0, readed);
-                        } else if (readed == -1) {
-                            done = true;
-                            break;
-                        } else {
-                            break;
-                        }
-                    } catch (Exception e) {
-                        FileLog.e("tmessages", e);
-                        break;
-                    }
-                }
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-            }
-
-            try {
-                if (fileOutputStream != null) {
-                    fileOutputStream.close();
-                    fileOutputStream = null;
-                }
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-            }
-
-            try {
-                if (httpConnectionStream != null) {
-                    httpConnectionStream.close();
-                }
-                httpConnectionStream = null;
-            } catch (Throwable e) {
-                FileLog.e("tmessages", e);
-            }
-
-            if (done) {
-                if (cacheImage.tempFilePath != null) {
-                    cacheImage.tempFilePath.renameTo(cacheImage.finalFilePath);
-                }
-            }
-
-            return done;
-        }
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            fileDidLoaded(cacheImage.url, cacheImage.finalFilePath, cacheImage.tempFilePath);
-            runHttpTasks(true);
-        }
-
-        @Override
-        protected void onCancelled() {
-            runHttpTasks(true);
-        }
-    }
-
-    private class CacheOutTask implements Runnable {
-        private final Object sync = new Object();
-        private Thread runningThread = null;
-        private CacheImage cacheImage = null;
-        private boolean isCancelled = false;
-
-        public CacheOutTask(CacheImage cacheImage) {
-            this.cacheImage = cacheImage;
-        }
-
-        @Override
-        public void run() {
-            synchronized (sync) {
-                runningThread = Thread.currentThread();
-                Thread.interrupted();
-                if (isCancelled) {
-                    return;
-                }
-            }
-
-            Long mediaId = null;
-            Bitmap image = null;
-            File cacheFileFinal = null;
-            boolean canDeleteFile = true;
-
-            if (cacheImage.finalFilePath != null && cacheImage.finalFilePath.exists()) {
-                cacheFileFinal = cacheImage.finalFilePath;
-            } else if (cacheImage.tempFilePath != null && cacheImage.tempFilePath.exists()) {
-                cacheFileFinal = cacheImage.tempFilePath;
-            } else if (cacheImage.finalFilePath != null) {
-                cacheFileFinal = cacheImage.finalFilePath;
-            }
-
-            try {
-                if (cacheImage.httpUrl != null) {
-                    if (cacheImage.httpUrl.startsWith("thumb://")) {
-                        int idx = cacheImage.httpUrl.indexOf(":", 8);
-                        if (idx >= 0) {
-                            mediaId = Long.parseLong(cacheImage.httpUrl.substring(8, idx));
-                        }
-                        canDeleteFile = false;
-                    } else if (!cacheImage.httpUrl.startsWith("http")) {
-                        canDeleteFile = false;
-                    }
-                }
-
-                int delay = 20;
-                if (runtimeHack != null) {
-                    delay = 60;
-                }
-                if (mediaId != null) {
-                    delay = 0;
-                }
-                if (delay != 0 && lastCacheOutTime != 0 && lastCacheOutTime > System.currentTimeMillis() - delay) {
-                    Thread.sleep(delay);
-                }
-                lastCacheOutTime = System.currentTimeMillis();
-                synchronized (sync) {
-                    if (isCancelled) {
-                        return;
-                    }
-                }
-
-                BitmapFactory.Options opts = new BitmapFactory.Options();
-
-                float w_filter = 0;
-                float h_filter = 0;
-                boolean blur = false;
-                if (cacheImage.filter != null) {
-                    String args[] = cacheImage.filter.split("_");
-                    w_filter = Float.parseFloat(args[0]) * AndroidUtilities.density;
-                    h_filter = Float.parseFloat(args[1]) * AndroidUtilities.density;
-                    if (args.length > 2) {
-                        blur = true;
-                    }
-                    opts.inJustDecodeBounds = true;
-
-                    if (mediaId != null) {
-                        MediaStore.Images.Thumbnails.getThumbnail(ApplicationLoader.applicationContext.getContentResolver(), mediaId, MediaStore.Images.Thumbnails.MINI_KIND, opts);
-                    } else {
-                        if (cacheImage.finalFilePath != null && cacheImage.finalFilePath.exists()) {
-                            BitmapFactory.decodeFile(cacheImage.finalFilePath.getAbsolutePath(), opts);
-                        } else if (cacheImage.tempFilePath != null && cacheImage.tempFilePath.exists()) {
-                            BitmapFactory.decodeFile(cacheImage.tempFilePath.getAbsolutePath(), opts);
-                        }
-                    }
-
-                    float photoW = opts.outWidth;
-                    float photoH = opts.outHeight;
-                    float scaleFactor = Math.max(photoW / w_filter, photoH / h_filter);
-                    if (scaleFactor < 1) {
-                        scaleFactor = 1;
-                    }
-                    opts.inJustDecodeBounds = false;
-                    opts.inSampleSize = (int) scaleFactor;
-                }
-                synchronized (sync) {
-                    if (isCancelled) {
-                        return;
-                    }
-                }
-
-                if (cacheImage.filter == null || blur) {
-                    opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                } else {
-                    opts.inPreferredConfig = Bitmap.Config.RGB_565;
-                }
-                opts.inDither = false;
-                if (mediaId != null) {
-                    image = MediaStore.Images.Thumbnails.getThumbnail(ApplicationLoader.applicationContext.getContentResolver(), mediaId, MediaStore.Images.Thumbnails.MINI_KIND, null);
-                }
-                if (image == null) {
-                    FileInputStream is = new FileInputStream(cacheFileFinal);
-                    image = BitmapFactory.decodeStream(is, null, opts);
-                    is.close();
-                }
-                if (image == null) {
-                    if (canDeleteFile && (cacheFileFinal.length() == 0 || cacheImage.filter == null)) {
-                        cacheFileFinal.delete();
-                    }
-                } else {
-                    if (cacheImage.filter != null) {
-                        float bitmapW = image.getWidth();
-                        float bitmapH = image.getHeight();
-                        if (bitmapW != w_filter && bitmapW > w_filter) {
-                            float scaleFactor = bitmapW / w_filter;
-                            Bitmap scaledBitmap = Bitmap.createScaledBitmap(image, (int) w_filter, (int) (bitmapH / scaleFactor), true);
-                            if (image != scaledBitmap) {
-                                image.recycle();
-                                image = scaledBitmap;
-                            }
-                        }
-                        if (image != null && blur && bitmapH < 100 && bitmapW < 100) {
-                            Utilities.blurBitmap(image, 3);
-                        }
-                    }
-                    if (runtimeHack != null) {
-                        runtimeHack.trackFree(image.getRowBytes() * image.getHeight());
-                    }
-                }
-            } catch (Throwable e) {
-                //don't promt
-            }
-            Thread.interrupted();
-            onPostExecute(image != null ? new BitmapDrawable(image) : null);
-        }
-
-        private void onPostExecute(final BitmapDrawable bitmapDrawable) {
-            AndroidUtilities.runOnUIThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (bitmapDrawable != null && memCache.get(cacheImage.key) == null) {
-                        memCache.put(cacheImage.key, bitmapDrawable);
-                    }
-                    cacheImage.setImageAndClear(bitmapDrawable);
-                }
-            });
-        }
-
-        public void cancel() {
-            synchronized (sync) {
+        if (path == null && uri != null && uri.getScheme() != null) {
+            String imageFilePath = null;
+            if (uri.getScheme().contains("file")) {
+                path = uri.getPath();
+            } else {
                 try {
-                    isCancelled = true;
-                    if (runningThread != null) {
-                        runningThread.interrupt();
-                    }
-                } catch (Exception e) {
-                    //don't promt
+                    path = Utilities.getPath(uri);
+                } catch (Throwable e) {
+                    FileLog.e("tmessages", e);
                 }
             }
         }
-    }
 
-    public class VMRuntimeHack {
-        private Object runtime = null;
-        private Method trackAllocation = null;
-        private Method trackFree = null;
-
-        @SuppressWarnings("unchecked")
-        public VMRuntimeHack() {
+        if (path != null) {
+            BitmapFactory.decodeFile(path, bmOptions);
+        } else if (uri != null) {
+            boolean error = false;
             try {
-                Class cl = Class.forName("dalvik.system.VMRuntime");
-                Method getRt = cl.getMethod("getRuntime", new Class[0]);
-                Object[] objects = new Object[0];
-                runtime = getRt.invoke(null, objects);
-                trackAllocation = cl.getMethod("trackExternalAllocation", new Class[]{long.class});
-                trackFree = cl.getMethod("trackExternalFree", new Class[]{long.class});
-            } catch (Exception e) {
+                parcelFD = ApplicationLoader.applicationContext.getContentResolver().openFileDescriptor(uri, "r");
+                fileDescriptor = parcelFD.getFileDescriptor();
+                BitmapFactory.decodeFileDescriptor(fileDescriptor, null, bmOptions);
+            } catch (Throwable e) {
                 FileLog.e("tmessages", e);
-                runtime = null;
-                trackAllocation = null;
-                trackFree = null;
+                try {
+                    if (parcelFD != null) {
+                        parcelFD.close();
+                    }
+                } catch (Throwable e2) {
+                    FileLog.e("tmessages", e2);
+                }
+                return null;
+            }
+        }
+        float photoW = bmOptions.outWidth;
+        float photoH = bmOptions.outHeight;
+        float scaleFactor = Math.max(photoW / maxWidth, photoH / maxHeight);
+        if (scaleFactor < 1) {
+            scaleFactor = 1;
+        }
+        bmOptions.inJustDecodeBounds = false;
+        bmOptions.inSampleSize = (int)scaleFactor;
+
+        String exifPath = null;
+        if (path != null) {
+            exifPath = path;
+        } else if (uri != null) {
+            exifPath = Utilities.getPath(uri);
+        }
+
+        Matrix matrix = null;
+
+        if (exifPath != null) {
+            ExifInterface exif;
+            try {
+                exif = new ExifInterface(exifPath);
+                int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1);
+                matrix = new Matrix();
+                switch (orientation) {
+                    case ExifInterface.ORIENTATION_ROTATE_90:
+                        matrix.postRotate(90);
+                        break;
+                    case ExifInterface.ORIENTATION_ROTATE_180:
+                        matrix.postRotate(180);
+                        break;
+                    case ExifInterface.ORIENTATION_ROTATE_270:
+                        matrix.postRotate(270);
+                        break;
+                }
+            } catch (Throwable e) {
+                FileLog.e("tmessages", e);
             }
         }
 
-        public boolean trackAlloc(long size) {
-            if (runtime == null) {
-                return false;
-            }
+        Bitmap b = null;
+        if (path != null) {
             try {
-                Object res = trackAllocation.invoke(runtime, size);
-                return (res instanceof Boolean) ? (Boolean) res : true;
-            } catch (Exception e) {
-                return false;
+                b = BitmapFactory.decodeFile(path, bmOptions);
+                if (b != null) {
+                    b = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), matrix, true);
+                }
+            } catch (Throwable e) {
+                FileLog.e("tmessages", e);
+                ImageLoader.getInstance().clearMemory();
+                try {
+                    if (b == null) {
+                        b = BitmapFactory.decodeFile(path, bmOptions);
+                    }
+                    if (b != null) {
+                        b = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), matrix, true);
+                    }
+                } catch (Throwable e2) {
+                    FileLog.e("tmessages", e2);
+                }
+            }
+        } else if (uri != null) {
+            try {
+                b = BitmapFactory.decodeFileDescriptor(fileDescriptor, null, bmOptions);
+                if (b != null) {
+                    b = Bitmap.createBitmap(b, 0, 0, b.getWidth(), b.getHeight(), matrix, true);
+                }
+            } catch (Throwable e) {
+                FileLog.e("tmessages", e);
+            } finally {
+                try {
+                    if (parcelFD != null) {
+                        parcelFD.close();
+                    }
+                } catch (Throwable e) {
+                    FileLog.e("tmessages", e);
+                }
             }
         }
 
-        public boolean trackFree(long size) {
-            if (runtime == null) {
-                return false;
-            }
-            try {
-                Object res = trackFree.invoke(runtime, size);
-                return (res instanceof Boolean) ? (Boolean) res : true;
-            } catch (Exception e) {
-                return false;
-            }
-        }
+        return b;
     }
 
-    private class CacheImage {
-        protected String key = null;
-        protected String url = null;
-        protected String filter = null;
-        protected TLRPC.FileLocation fileLocation = null;
-        protected String httpUrl = null;
-        protected File finalFilePath = null;
-        protected File tempFilePath = null;
-        protected CacheOutTask cacheTask;
-        protected HttpTask httpTask;
-        protected ArrayList<ImageReceiver> imageViewArray = new ArrayList<ImageReceiver>();
-
-        public void addImageView(ImageReceiver imageView) {
-            boolean exist = false;
-            for (ImageReceiver v : imageViewArray) {
-                if (v == imageView) {
-                    exist = true;
-                    break;
-                }
-            }
-            if (!exist) {
-                imageViewArray.add(imageView);
-                imageLoadingByTag.put(imageView.getTag(), this);
-            }
+    private static TLRPC.PhotoSize scaleAndSaveImageInternal(Bitmap bitmap, int w, int h, float photoW, float photoH, float scaleFactor, int quality, boolean cache, boolean scaleAnyway) throws Exception {
+        Bitmap scaledBitmap = null;
+        if (scaleFactor > 1 || scaleAnyway) {
+            scaledBitmap = Bitmap.createScaledBitmap(bitmap, w, h, true);
+        } else {
+            scaledBitmap = bitmap;
         }
 
-        public void removeImageView(ImageReceiver imageView) {
-            for (int a = 0; a < imageViewArray.size(); a++) {
-                ImageReceiver obj = imageViewArray.get(a);
-                if (obj == null || obj == imageView) {
-                    imageViewArray.remove(a);
-                    if (obj != null) {
-                        imageLoadingByTag.remove(obj.getTag());
-                    }
-                    a--;
-                }
-            }
-
-            if (imageViewArray.size() == 0) {
-                cancelAndClear();
-            }
+        TLRPC.TL_fileLocation location = new TLRPC.TL_fileLocation();
+        location.volume_id = Integer.MIN_VALUE;
+        location.dc_id = Integer.MIN_VALUE;
+        location.local_id = UserConfig.lastLocalId;
+        UserConfig.lastLocalId--;
+        TLRPC.PhotoSize size;
+        if (!cache) {
+            size = new TLRPC.TL_photoSize();
+        } else {
+            size = new TLRPC.TL_photoCachedSize();
+        }
+        size.location = location;
+        size.w = scaledBitmap.getWidth();
+        size.h = scaledBitmap.getHeight();
+        if (size.w <= 100 && size.h <= 100) {
+            size.type = "s";
+        } else if (size.w <= 320 && size.h <= 320) {
+            size.type = "m";
+        } else if (size.w <= 800 && size.h <= 800) {
+            size.type = "x";
+        } else if (size.w <= 1280 && size.h <= 1280) {
+            size.type = "y";
+        } else {
+            size.type = "w";
         }
 
-        public void setImageAndClear(BitmapDrawable image) {
-            if (image != null) {
-                for (ImageReceiver imgView : imageViewArray) {
-                    imgView.setImageBitmap(image, key);
-                }
-            }
-            clear();
+        if (!cache) {
+            String fileName = location.volume_id + "_" + location.local_id + ".jpg";
+            final File cacheFile = new File(FileLoader.getInstance().getDirectory(FileLoader.MEDIA_DIR_CACHE), fileName);
+            FileOutputStream stream = new FileOutputStream(cacheFile);
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream);
+            size.size = (int)stream.getChannel().size();
+        } else {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, quality, stream);
+            size.bytes = stream.toByteArray();
+            size.size = size.bytes.length;
+        }
+        if (scaledBitmap != bitmap) {
+            scaledBitmap.recycle();
         }
 
-        public void cancelAndClear() {
-            if (fileLocation != null) {
-                FileLoader.getInstance().cancelLoadFile(fileLocation);
-            }
-            if (cacheTask != null) {
-                cacheOutQueue.cancelRunnable(cacheTask);
-                cacheTask.cancel();
-                cacheTask = null;
-            }
-            if (httpTask != null) {
-                httpTasks.remove(httpTask);
-                httpTask.cancel(true);
-                httpTask = null;
-            }
-            clear();
+        return size;
+    }
+
+    public static TLRPC.PhotoSize scaleAndSaveImage(Bitmap bitmap, float maxWidth, float maxHeight, int quality, boolean cache) {
+        return scaleAndSaveImage(bitmap, maxWidth, maxHeight, quality, cache, 0, 0);
+    }
+
+    public static TLRPC.PhotoSize scaleAndSaveImage(Bitmap bitmap, float maxWidth, float maxHeight, int quality, boolean cache, int minWidth, int minHeight) {
+        if (bitmap == null) {
+            return null;
+        }
+        float photoW = bitmap.getWidth();
+        float photoH = bitmap.getHeight();
+        if (photoW == 0 || photoH == 0) {
+            return null;
+        }
+        boolean scaleAnyway = false;
+        float scaleFactor = Math.max(photoW / maxWidth, photoH / maxHeight);
+        if (scaleFactor < 1 && minWidth != 0 && minHeight != 0) {
+            scaleFactor = Math.max(photoW / minWidth, photoH / minHeight);
+            scaleAnyway = true;
+        }
+        int w = (int)(photoW / scaleFactor);
+        int h = (int)(photoH / scaleFactor);
+        if (h == 0 || w == 0) {
+            return null;
         }
 
-        private void clear() {
-            for (ImageReceiver imageReceiver : imageViewArray) {
-                imageLoadingByTag.remove(imageReceiver.getTag());
-            }
-            imageViewArray.clear();
-            if (url != null) {
-                imageLoadingByUrl.remove(url);
-            }
-            if (key != null) {
-                imageLoadingByKeys.remove(key);
+        try {
+            return scaleAndSaveImageInternal(bitmap, w, h, photoW, photoH, scaleFactor, quality, cache, scaleAnyway);
+        } catch (Throwable e) {
+            FileLog.e("tmessages", e);
+            ImageLoader.getInstance().clearMemory();
+            System.gc();
+            try {
+                return scaleAndSaveImageInternal(bitmap, w, h, photoW, photoH, scaleFactor, quality, cache, scaleAnyway);
+            } catch (Throwable e2) {
+                FileLog.e("tmessages", e2);
+                return null;
             }
         }
     }

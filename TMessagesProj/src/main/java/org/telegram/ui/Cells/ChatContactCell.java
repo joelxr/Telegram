@@ -19,33 +19,43 @@ import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 
 import org.telegram.PhoneFormat.PhoneFormat;
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.ContactsController;
 import org.telegram.android.ImageReceiver;
 import org.telegram.android.LocaleController;
 import org.telegram.android.MessageObject;
 import org.telegram.android.MessagesController;
+import org.telegram.R;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.ui.Components.AvatarDrawable;
 
 public class ChatContactCell extends ChatBaseCell {
 
+    public static interface ChatContactCellDelegate {
+        public abstract void didClickAddButton(ChatContactCell cell, TLRPC.User user);
+        public abstract void didClickPhone(ChatContactCell cell);
+    }
+
     private static TextPaint namePaint;
     private static TextPaint phonePaint;
     private static Drawable addContactDrawableIn;
     private static Drawable addContactDrawableOut;
+
     private ImageReceiver avatarImage;
     private AvatarDrawable avatarDrawable;
+
     private StaticLayout nameLayout;
     private StaticLayout phoneLayout;
+
     private TLRPC.User contactUser;
     private TLRPC.FileLocation currentPhoto;
+
     private boolean avatarPressed = false;
     private boolean buttonPressed = false;
     private boolean drawAddButton = false;
     private int namesWidth = 0;
+
     private ChatContactCellDelegate contactDelegate = null;
 
     public ChatContactCell(Context context) {
@@ -193,7 +203,7 @@ public class ChatContactCell extends ChatBaseCell {
             CharSequence stringFinal = TextUtils.ellipsize(currentNameString.replace("\n", " "), namePaint, nameWidth, TextUtils.TruncateAt.END);
             nameLayout = new StaticLayout(stringFinal, namePaint, nameWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
             if (nameLayout.getLineCount() > 0) {
-                nameWidth = (int) Math.ceil(nameLayout.getLineWidth(0));
+                nameWidth = (int)Math.ceil(nameLayout.getLineWidth(0));
             } else {
                 nameWidth = 0;
             }
@@ -211,7 +221,7 @@ public class ChatContactCell extends ChatBaseCell {
             stringFinal = TextUtils.ellipsize(phone.replace("\n", " "), phonePaint, phoneWidth, TextUtils.TruncateAt.END);
             phoneLayout = new StaticLayout(stringFinal, phonePaint, phoneWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
             if (phoneLayout.getLineCount() > 0) {
-                phoneWidth = (int) Math.ceil(phoneLayout.getLineWidth(0));
+                phoneWidth = (int)Math.ceil(phoneLayout.getLineWidth(0));
             } else {
                 phoneWidth = 0;
             }
@@ -284,11 +294,5 @@ public class ChatContactCell extends ChatBaseCell {
             setDrawableBounds(addContactDrawable, avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(78), AndroidUtilities.dp(13));
             addContactDrawable.draw(canvas);
         }
-    }
-
-    public static interface ChatContactCellDelegate {
-        public abstract void didClickAddButton(ChatContactCell cell, TLRPC.User user);
-
-        public abstract void didClickPhone(ChatContactCell cell);
     }
 }

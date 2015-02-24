@@ -21,9 +21,9 @@ import org.telegram.ui.Components.FrameLayoutFixed;
 
 public class TextDetailSettingsCell extends FrameLayoutFixed {
 
-    private static Paint paint;
     private TextView textView;
     private TextView valueTextView;
+    private static Paint paint;
     private boolean needDivider;
     private boolean multiline;
 

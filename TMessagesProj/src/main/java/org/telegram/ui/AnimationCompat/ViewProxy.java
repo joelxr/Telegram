@@ -86,11 +86,27 @@ public class ViewProxy {
         }
     }
 
+    public void setRotationX(View view, float rotationX) {
+        if (View10.NEED_PROXY) {
+            View10.wrap(view).setRotationX(rotationX);
+        } else {
+            view.setRotationX(rotationX);
+        }
+    }
+
     public static float getRotationY(View view) {
         if (View10.NEED_PROXY) {
             return View10.wrap(view).getRotationY();
         } else {
             return view.getRotationY();
+        }
+    }
+
+    public void setRotationY(View view, float rotationY) {
+        if (View10.NEED_PROXY) {
+            View10.wrap(view).setRotationY(rotationY);
+        } else {
+            view.setRotationY(rotationY);
         }
     }
 
@@ -227,22 +243,6 @@ public class ViewProxy {
             return View10.wrap(view);
         } else {
             return view;
-        }
-    }
-
-    public void setRotationX(View view, float rotationX) {
-        if (View10.NEED_PROXY) {
-            View10.wrap(view).setRotationX(rotationX);
-        } else {
-            view.setRotationX(rotationX);
-        }
-    }
-
-    public void setRotationY(View view, float rotationY) {
-        if (View10.NEED_PROXY) {
-            View10.wrap(view).setRotationY(rotationY);
-        } else {
-            view.setRotationY(rotationY);
         }
     }
 }

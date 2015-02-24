@@ -19,11 +19,11 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.util.Linkify;
 
-import org.telegram.R;
 import org.telegram.messenger.ConnectionsManager;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.TLRPC;
+import org.telegram.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.ui.Components.URLSpanNoUnderline;
 
@@ -37,8 +37,7 @@ public class MessageObject {
     public static final int MESSAGE_SEND_STATE_SENDING = 1;
     public static final int MESSAGE_SEND_STATE_SENT = 0;
     public static final int MESSAGE_SEND_STATE_SEND_ERROR = 2;
-    private static final int LINES_PER_BLOCK = 10;
-    private static TextPaint textPaint;
+
     public TLRPC.Message messageOwner;
     public CharSequence messageText;
     public int type;
@@ -49,10 +48,22 @@ public class MessageObject {
     public boolean deleted = false;
     public float audioProgress;
     public int audioProgressSec;
+
+    private static TextPaint textPaint;
     public int lastLineWidth;
     public int textWidth;
     public int textHeight;
     public int blockHeight = Integer.MAX_VALUE;
+
+    public static class TextLayoutBlock {
+        public StaticLayout textLayout;
+        public float textXOffset = 0;
+        public float textYOffset = 0;
+        public int charactersOffset = 0;
+    }
+
+    private static final int LINES_PER_BLOCK = 10;
+
     public ArrayList<TextLayoutBlock> textLayoutBlocks;
 
     public MessageObject(TLRPC.Message message, AbstractMap<Integer, TLRPC.User> users) {
@@ -194,7 +205,7 @@ public class MessageObject {
                         }
                     }
                 } else if (message.action instanceof TLRPC.TL_messageActionLoginUnknownLocation) {
-                    String date = LocaleController.formatString("formatDateAtTime", R.string.formatDateAtTime, LocaleController.formatterYear.format(((long) message.date) * 1000), LocaleController.formatterDay.format(((long) message.date) * 1000));
+                    String date = LocaleController.formatString("formatDateAtTime", R.string.formatDateAtTime, LocaleController.formatterYear.format(((long)message.date) * 1000), LocaleController.formatterDay.format(((long)message.date) * 1000));
                     TLRPC.User to_user = UserConfig.getCurrentUser();
                     if (to_user == null) {
                         if (users != null) {
@@ -328,7 +339,7 @@ public class MessageObject {
         }
 
         Calendar rightNow = new GregorianCalendar();
-        rightNow.setTimeInMillis((long) (messageOwner.date) * 1000);
+        rightNow.setTimeInMillis((long)(messageOwner.date) * 1000);
         int dateDay = rightNow.get(Calendar.DAY_OF_YEAR);
         int dateYear = rightNow.get(Calendar.YEAR);
         int dateMonth = rightNow.get(Calendar.MONTH);
@@ -338,22 +349,6 @@ public class MessageObject {
             generateLayout();
         }
         generateThumbs(false, preview);
-    }
-
-    public static void setIsUnread(TLRPC.Message message, boolean unread) {
-        if (unread) {
-            message.flags |= TLRPC.MESSAGE_FLAG_UNREAD;
-        } else {
-            message.flags &= ~TLRPC.MESSAGE_FLAG_UNREAD;
-        }
-    }
-
-    public static boolean isUnread(TLRPC.Message message) {
-        return (message.flags & TLRPC.MESSAGE_FLAG_UNREAD) != 0;
-    }
-
-    public static boolean isOut(TLRPC.Message message) {
-        return (message.flags & TLRPC.MESSAGE_FLAG_OUT) != 0;
     }
 
     public CharSequence replaceWithLink(CharSequence source, String param, TLRPC.User user) {
@@ -423,8 +418,7 @@ public class MessageObject {
                     PhotoObject photoObject = photoThumbs.get(0);
                     photoObject.photoOwner.location = messageOwner.media.video.thumb.location;
                 }
-            }
-            if (messageOwner.media instanceof TLRPC.TL_messageMediaDocument) {
+            } if (messageOwner.media instanceof TLRPC.TL_messageMediaDocument) {
                 if (!(messageOwner.media.document.thumb instanceof TLRPC.TL_photoSizeEmpty)) {
                     if (!update) {
                         photoThumbs = new ArrayList<PhotoObject>();
@@ -554,7 +548,7 @@ public class MessageObject {
         textHeight = textLayout.getHeight();
         int linesCount = textLayout.getLineCount();
 
-        int blocksCount = (int) Math.ceil((float) linesCount / LINES_PER_BLOCK);
+        int blocksCount = (int)Math.ceil((float)linesCount / LINES_PER_BLOCK);
         int linesOffset = 0;
         float prevOffset = 0;
 
@@ -579,7 +573,7 @@ public class MessageObject {
                     block.textLayout = new StaticLayout(str, textPaint, maxWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
                     block.textYOffset = textLayout.getLineTop(linesOffset);
                     if (a != 0) {
-                        blockHeight = Math.min(blockHeight, (int) (block.textYOffset - prevOffset));
+                        blockHeight = Math.min(blockHeight, (int)(block.textYOffset - prevOffset));
                     }
                     prevOffset = block.textYOffset;
                     /*if (a != blocksCount - 1) {
@@ -611,7 +605,7 @@ public class MessageObject {
                 FileLog.e("tmessages", e);
             }
 
-            int linesMaxWidth = (int) Math.ceil(lastLine);
+            int linesMaxWidth = (int)Math.ceil(lastLine);
             int lastLineWidthWithLeft;
             int linesMaxWidthWithLeft;
             boolean hasNonRTL = false;
@@ -620,7 +614,7 @@ public class MessageObject {
                 lastLineWidth = linesMaxWidth;
             }
 
-            linesMaxWidthWithLeft = lastLineWidthWithLeft = (int) Math.ceil(lastLine + lastLeft);
+            linesMaxWidthWithLeft = lastLineWidthWithLeft = (int)Math.ceil(lastLine + lastLeft);
             if (lastLeft == 0) {
                 hasNonRTL = true;
             }
@@ -653,8 +647,8 @@ public class MessageObject {
                     }
                     textRealMaxWidth = Math.max(textRealMaxWidth, lineWidth);
                     textRealMaxWidthWithLeft = Math.max(textRealMaxWidthWithLeft, lineWidth + lineLeft);
-                    linesMaxWidth = Math.max(linesMaxWidth, (int) Math.ceil(lineWidth));
-                    linesMaxWidthWithLeft = Math.max(linesMaxWidthWithLeft, (int) Math.ceil(lineWidth + lineLeft));
+                    linesMaxWidth = Math.max(linesMaxWidth, (int)Math.ceil(lineWidth));
+                    linesMaxWidthWithLeft = Math.max(linesMaxWidthWithLeft, (int)Math.ceil(lineWidth + lineLeft));
                 }
                 if (hasNonRTL) {
                     textRealMaxWidth = textRealMaxWidthWithLeft;
@@ -665,7 +659,7 @@ public class MessageObject {
                 } else if (a == blocksCount - 1) {
                     lastLineWidth = linesMaxWidth;
                 }
-                textWidth = Math.max(textWidth, (int) Math.ceil(textRealMaxWidth));
+                textWidth = Math.max(textWidth, (int)Math.ceil(textRealMaxWidth));
             } else {
                 textWidth = Math.max(textWidth, Math.min(maxWidth, linesMaxWidth));
             }
@@ -694,7 +688,7 @@ public class MessageObject {
     }
 
     public void setIsRead() {
-        messageOwner.flags &= ~TLRPC.MESSAGE_FLAG_UNREAD;
+        messageOwner.flags &=~ TLRPC.MESSAGE_FLAG_UNREAD;
     }
 
     public boolean isSecretPhoto() {
@@ -704,8 +698,24 @@ public class MessageObject {
     public boolean isSecretMedia() {
         return messageOwner instanceof TLRPC.TL_message_secret &&
                 (messageOwner.media instanceof TLRPC.TL_messageMediaPhoto && messageOwner.ttl != 0 && messageOwner.ttl <= 60 ||
-                        messageOwner.media instanceof TLRPC.TL_messageMediaAudio ||
-                        messageOwner.media instanceof TLRPC.TL_messageMediaVideo);
+                messageOwner.media instanceof TLRPC.TL_messageMediaAudio ||
+                messageOwner.media instanceof TLRPC.TL_messageMediaVideo);
+    }
+
+    public static void setIsUnread(TLRPC.Message message, boolean unread) {
+        if (unread) {
+            message.flags |= TLRPC.MESSAGE_FLAG_UNREAD;
+        } else {
+            message.flags &=~ TLRPC.MESSAGE_FLAG_UNREAD;
+        }
+    }
+
+    public static boolean isUnread(TLRPC.Message message) {
+        return (message.flags & TLRPC.MESSAGE_FLAG_UNREAD) != 0;
+    }
+
+    public static boolean isOut(TLRPC.Message message) {
+        return (message.flags & TLRPC.MESSAGE_FLAG_OUT) != 0;
     }
 
     public long getDialogId() {
@@ -749,12 +759,5 @@ public class MessageObject {
             str = secondsLeft / 60 + "m";
         }
         return str;
-    }
-
-    public static class TextLayoutBlock {
-        public StaticLayout textLayout;
-        public float textXOffset = 0;
-        public float textYOffset = 0;
-        public int charactersOffset = 0;
     }
 }

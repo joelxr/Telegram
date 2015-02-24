@@ -23,9 +23,9 @@ import org.telegram.ui.Components.Switch;
 
 public class TextCheckCell extends FrameLayoutFixed {
 
-    private static Paint paint;
     private TextView textView;
     private Switch checkBox;
+    private static Paint paint;
     private boolean needDivider;
 
     public TextCheckCell(Context context) {

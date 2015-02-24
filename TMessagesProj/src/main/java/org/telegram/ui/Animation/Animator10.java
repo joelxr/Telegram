@@ -30,9 +30,11 @@ public abstract class Animator10 implements Cloneable {
 
     public abstract void setStartDelay(long startDelay);
 
+    public abstract Animator10 setDuration(long duration);
+
     public abstract long getDuration();
 
-    public abstract Animator10 setDuration(long duration);
+    public abstract void setInterpolator(Interpolator value);
 
     public abstract boolean isRunning();
 
@@ -87,8 +89,6 @@ public abstract class Animator10 implements Cloneable {
     public Interpolator getInterpolator() {
         return null;
     }
-
-    public abstract void setInterpolator(Interpolator value);
 
     public void addListener(AnimatorListener listener) {
         if (mListeners == null) {
@@ -179,17 +179,13 @@ public abstract class Animator10 implements Cloneable {
 
     public static interface AnimatorListener {
         void onAnimationStart(Animator10 animation);
-
         void onAnimationEnd(Animator10 animation);
-
         void onAnimationCancel(Animator10 animation);
-
         void onAnimationRepeat(Animator10 animation);
     }
 
     public static interface AnimatorPauseListener {
         void onAnimationPause(Animator10 animation);
-
         void onAnimationResume(Animator10 animation);
     }
 }

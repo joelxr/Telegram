@@ -17,14 +17,14 @@ import android.text.TextPaint;
 import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 
-import org.telegram.R;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.android.ImageReceiver;
-import org.telegram.android.MediaController;
-import org.telegram.android.MessageObject;
-import org.telegram.android.MessagesController;
 import org.telegram.messenger.FileLoader;
+import org.telegram.android.MediaController;
 import org.telegram.messenger.TLRPC;
+import org.telegram.android.MessagesController;
+import org.telegram.R;
+import org.telegram.android.MessageObject;
+import org.telegram.android.ImageReceiver;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.ProgressView;
 import org.telegram.ui.Components.SeekBar;
@@ -35,7 +35,7 @@ public class ChatAudioCell extends ChatBaseCell implements SeekBar.SeekBarDelega
 
     private static Drawable[][] statesDrawable = new Drawable[8][2];
     private static TextPaint timePaint;
-    public TLRPC.User audioUser;
+
     private ImageReceiver avatarImage;
     private AvatarDrawable avatarDrawable;
     private boolean needAvatarImage = false;
@@ -43,15 +43,21 @@ public class ChatAudioCell extends ChatBaseCell implements SeekBar.SeekBarDelega
     private ProgressView progressView;
     private int seekBarX;
     private int seekBarY;
+
     private int buttonState = 0;
     private int buttonX;
     private int buttonY;
     private boolean buttonPressed = false;
+
     private boolean avatarPressed = false;
+
     private StaticLayout timeLayout;
     private int timeX;
     private String lastTimeString = null;
+
     private int TAG;
+
+    public TLRPC.User audioUser;
     private TLRPC.FileLocation currentPhoto;
 
     public ChatAudioCell(Context context) {
@@ -199,7 +205,7 @@ public class ChatAudioCell extends ChatBaseCell implements SeekBar.SeekBarDelega
         }
         String timeString = String.format("%02d:%02d", duration / 60, duration % 60);
         if (lastTimeString == null || lastTimeString != null && !lastTimeString.equals(timeString)) {
-            int timeWidth = (int) Math.ceil(timePaint.measureText(timeString));
+            int timeWidth = (int)Math.ceil(timePaint.measureText(timeString));
             timeLayout = new StaticLayout(timeString, timePaint, timeWidth, Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
         }
         invalidate();

@@ -17,7 +17,6 @@ import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.SQLite.SQLiteDatabase;
 import org.telegram.SQLite.SQLitePreparedStatement;
-import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuffersStorage;
 import org.telegram.messenger.ByteBufferDesc;
 import org.telegram.messenger.ConnectionsManager;
@@ -29,6 +28,7 @@ import org.telegram.messenger.TLObject;
 import org.telegram.messenger.TLRPC;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
+import org.telegram.messenger.ApplicationLoader;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -40,6 +40,10 @@ import java.util.Map;
 import java.util.concurrent.Semaphore;
 
 public class MessagesStorage {
+    private DispatchQueue storageQueue = new DispatchQueue("storageQueue");
+    private SQLiteDatabase database;
+    private File cacheFile;
+    private BuffersStorage buffersStorage = new BuffersStorage(false);
     public static int lastDateValue = 0;
     public static int lastPtsValue = 0;
     public static int lastQtsValue = 0;
@@ -47,21 +51,13 @@ public class MessagesStorage {
     public static int lastSecretVersion = 0;
     public static byte[] secretPBytes = null;
     public static int secretG = 0;
-    private static volatile MessagesStorage Instance = null;
-    private DispatchQueue storageQueue = new DispatchQueue("storageQueue");
-    private SQLiteDatabase database;
-    private File cacheFile;
-    private BuffersStorage buffersStorage = new BuffersStorage(false);
+
     private int lastSavedSeq = 0;
     private int lastSavedPts = 0;
     private int lastSavedDate = 0;
     private int lastSavedQts = 0;
 
-    public MessagesStorage() {
-        storageQueue.setPriority(Thread.MAX_PRIORITY);
-        openDatabase();
-    }
-
+    private static volatile MessagesStorage Instance = null;
     public static MessagesStorage getInstance() {
         MessagesStorage localInstance = Instance;
         if (localInstance == null) {
@@ -73,6 +69,11 @@ public class MessagesStorage {
             }
         }
         return localInstance;
+    }
+
+    public MessagesStorage() {
+        storageQueue.setPriority(Thread.MAX_PRIORITY);
+        openDatabase();
     }
 
     public SQLiteDatabase getDatabase() {
@@ -480,15 +481,15 @@ public class MessagesStorage {
                         while (cursor.next()) {
                             ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(1));
                             if (data != null && cursor.byteBufferValue(1, data.buffer) != 0) {
-                                TLRPC.Message message = (TLRPC.Message) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                                TLRPC.Message message = (TLRPC.Message)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                                 MessageObject.setIsUnread(message, cursor.intValue(0) != 1);
                                 message.id = cursor.intValue(3);
                                 message.date = cursor.intValue(4);
                                 message.dialog_id = cursor.longValue(5);
                                 messages.add(message);
 
-                                int lower_id = (int) message.dialog_id;
-                                int high_id = (int) (message.dialog_id >> 32);
+                                int lower_id = (int)message.dialog_id;
+                                int high_id = (int)(message.dialog_id >> 32);
 
                                 if (lower_id != 0) {
                                     if (lower_id < 0) {
@@ -690,8 +691,8 @@ public class MessagesStorage {
                     if (!messagesOnly) {
                         database.executeFast("DELETE FROM dialogs WHERE did = " + did).stepThis().dispose();
                         database.executeFast("DELETE FROM chat_settings WHERE uid = " + did).stepThis().dispose();
-                        int lower_id = (int) did;
-                        int high_id = (int) (did >> 32);
+                        int lower_id = (int)did;
+                        int high_id = (int)(did >> 32);
                         if (lower_id != 0) {
                             if (high_id == 1) {
                                 database.executeFast("DELETE FROM chats WHERE uid = " + lower_id).stepThis().dispose();
@@ -732,7 +733,7 @@ public class MessagesStorage {
                     while (cursor.next()) {
                         ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(0));
                         if (data != null && cursor.byteBufferValue(0, data.buffer) != 0) {
-                            TLRPC.Photo photo = (TLRPC.Photo) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                            TLRPC.Photo photo = (TLRPC.Photo)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                             res.photos.add(photo);
                         }
                         buffersStorage.reuseFreeBuffer(data);
@@ -1023,7 +1024,7 @@ public class MessagesStorage {
                     if (cursor.next()) {
                         ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(0));
                         if (data != null && cursor.byteBufferValue(0, data.buffer) != 0) {
-                            info = (TLRPC.ChatParticipants) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                            info = (TLRPC.ChatParticipants)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                         }
                         buffersStorage.reuseFreeBuffer(data);
                     }
@@ -1086,7 +1087,7 @@ public class MessagesStorage {
                     if (cursor.next()) {
                         ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(0));
                         if (data != null && cursor.byteBufferValue(0, data.buffer) != 0) {
-                            info = (TLRPC.ChatParticipants) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                            info = (TLRPC.ChatParticipants)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                         }
                         buffersStorage.reuseFreeBuffer(data);
                     }
@@ -1148,7 +1149,7 @@ public class MessagesStorage {
                         state.step();
                         state.dispose();*/
 
-                        int lower_id = (int) dialog_id;
+                        int lower_id = (int)dialog_id;
 
                         if (lower_id != 0) {
                             state = database.executeFast("UPDATE messages SET read_state = 1 WHERE uid = ? AND mid <= ? AND read_state = 0 AND out = 0");
@@ -1391,7 +1392,7 @@ public class MessagesStorage {
                         count = cursor.intValue(0);
                     }
                     cursor.dispose();
-                    int lower_part = (int) uid;
+                    int lower_part = (int)uid;
                     if (count == -1 && lower_part == 0) {
                         cursor = database.queryFinalized(String.format(Locale.US, "SELECT COUNT(mid) FROM media WHERE uid = %d LIMIT 1", uid));
                         if (cursor.next()) {
@@ -1421,7 +1422,7 @@ public class MessagesStorage {
 
                     SQLiteCursor cursor;
 
-                    if ((int) uid != 0) {
+                    if ((int)uid != 0) {
                         if (max_id != 0) {
                             cursor = database.queryFinalized(String.format(Locale.US, "SELECT data, mid FROM media WHERE uid = %d AND mid < %d ORDER BY date DESC, mid DESC LIMIT %d", uid, max_id, count));
                         } else {
@@ -1438,10 +1439,10 @@ public class MessagesStorage {
                     while (cursor.next()) {
                         ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(0));
                         if (data != null && cursor.byteBufferValue(0, data.buffer) != 0) {
-                            TLRPC.Message message = (TLRPC.Message) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                            TLRPC.Message message = (TLRPC.Message)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                             message.id = cursor.intValue(1);
                             message.dialog_id = uid;
-                            if ((int) uid == 0) {
+                            if ((int)uid == 0) {
                                 message.random_id = cursor.longValue(2);
                             }
                             res.messages.add(message);
@@ -1523,7 +1524,7 @@ public class MessagesStorage {
                     while (cursor.next()) {
                         ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(1));
                         if (data != null && cursor.byteBufferValue(1, data.buffer) != 0) {
-                            TLRPC.Message message = (TLRPC.Message) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                            TLRPC.Message message = (TLRPC.Message)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                             MessageObject.setIsUnread(message, cursor.intValue(0) != 1);
                             message.id = cursor.intValue(3);
                             message.date = cursor.intValue(4);
@@ -1535,8 +1536,8 @@ public class MessagesStorage {
                             message.seq_out = cursor.intValue(8);
                             messages.add(message);
 
-                            int lower_id = (int) message.dialog_id;
-                            int high_id = (int) (message.dialog_id >> 32);
+                            int lower_id = (int)message.dialog_id;
+                            int high_id = (int)(message.dialog_id >> 32);
 
                             if (lower_id != 0) {
                                 if (high_id == 1) {
@@ -1663,7 +1664,7 @@ public class MessagesStorage {
                     ArrayList<Integer> fromUser = new ArrayList<Integer>();
 
                     SQLiteCursor cursor = null;
-                    int lower_id = (int) dialog_id;
+                    int lower_id = (int)dialog_id;
 
                     if (lower_id != 0) {
                         if (load_type == 3) {
@@ -2017,7 +2018,7 @@ public class MessagesStorage {
                     state = database.executeFast("UPDATE enc_chats SET seq_in = ?, seq_out = ?, use_count = ? WHERE uid = ?");
                     state.bindInteger(1, chat.seq_in);
                     state.bindInteger(2, chat.seq_out);
-                    state.bindInteger(3, (int) chat.key_use_count_in << 16 | chat.key_use_count_out);
+                    state.bindInteger(3, (int)chat.key_use_count_in << 16 | chat.key_use_count_out);
                     state.bindInteger(4, chat.id);
                     state.step();
                 } catch (Exception e) {
@@ -2120,7 +2121,7 @@ public class MessagesStorage {
                     state.bindInteger(5, chat.layer);
                     state.bindInteger(6, chat.seq_in);
                     state.bindInteger(7, chat.seq_out);
-                    state.bindInteger(8, (int) chat.key_use_count_in << 16 | chat.key_use_count_out);
+                    state.bindInteger(8, (int)chat.key_use_count_in << 16 | chat.key_use_count_out);
                     state.bindLong(9, chat.exchange_id);
                     state.bindInteger(10, chat.key_create_date);
                     state.bindLong(11, chat.future_key_fingerprint);
@@ -2216,7 +2217,7 @@ public class MessagesStorage {
                     state.bindInteger(8, chat.layer);
                     state.bindInteger(9, chat.seq_in);
                     state.bindInteger(10, chat.seq_out);
-                    state.bindInteger(11, (int) chat.key_use_count_in << 16 | chat.key_use_count_out);
+                    state.bindInteger(11, (int)chat.key_use_count_in << 16 | chat.key_use_count_out);
                     state.bindLong(12, chat.exchange_id);
                     state.bindInteger(13, chat.key_create_date);
                     state.bindLong(14, chat.future_key_fingerprint);
@@ -2327,7 +2328,7 @@ public class MessagesStorage {
             try {
                 ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(0));
                 if (data != null && cursor.byteBufferValue(0, data.buffer) != 0) {
-                    TLRPC.User user = (TLRPC.User) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                    TLRPC.User user = (TLRPC.User)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                     if (user != null) {
                         if (user.status != null) {
                             user.status.expires = cursor.intValue(1);
@@ -2352,7 +2353,7 @@ public class MessagesStorage {
             try {
                 ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(0));
                 if (data != null && cursor.byteBufferValue(0, data.buffer) != 0) {
-                    TLRPC.Chat chat = (TLRPC.Chat) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                    TLRPC.Chat chat = (TLRPC.Chat)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                     if (chat != null) {
                         result.add(chat);
                     }
@@ -2375,7 +2376,7 @@ public class MessagesStorage {
             try {
                 ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(0));
                 if (data != null && cursor.byteBufferValue(0, data.buffer) != 0) {
-                    TLRPC.EncryptedChat chat = (TLRPC.EncryptedChat) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                    TLRPC.EncryptedChat chat = (TLRPC.EncryptedChat)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                     if (chat != null) {
                         chat.user_id = cursor.intValue(1);
                         if (usersToLoad != null && !usersToLoad.contains(chat.user_id)) {
@@ -2388,8 +2389,8 @@ public class MessagesStorage {
                         chat.seq_in = cursor.intValue(6);
                         chat.seq_out = cursor.intValue(7);
                         int use_count = cursor.intValue(8);
-                        chat.key_use_count_in = (short) (use_count >> 16);
-                        chat.key_use_count_out = (short) (use_count);
+                        chat.key_use_count_in = (short)(use_count >> 16);
+                        chat.key_use_count_out = (short)(use_count);
                         chat.exchange_id = cursor.longValue(9);
                         chat.key_create_date = cursor.intValue(10);
                         chat.future_key_fingerprint = cursor.longValue(11);
@@ -2524,8 +2525,8 @@ public class MessagesStorage {
     private int getMessageMediaType(TLRPC.Message message) {
         if (message instanceof TLRPC.TL_message_secret && (
                 message.media instanceof TLRPC.TL_messageMediaPhoto && message.ttl != 0 && message.ttl <= 60 ||
-                        message.media instanceof TLRPC.TL_messageMediaAudio ||
-                        message.media instanceof TLRPC.TL_messageMediaVideo)) {
+                message.media instanceof TLRPC.TL_messageMediaAudio ||
+                message.media instanceof TLRPC.TL_messageMediaVideo)) {
             return 1;
         } else if (message.media instanceof TLRPC.TL_messageMediaPhoto || message.media instanceof TLRPC.TL_messageMediaVideo) {
             return 0;
@@ -2769,7 +2770,7 @@ public class MessagesStorage {
                 state = database.executeFast("REPLACE INTO media_counts VALUES(?, ?)");
                 for (HashMap.Entry<Long, Integer> pair : mediaCounts.entrySet()) {
                     long uid = pair.getKey();
-                    int lower_part = (int) uid;
+                    int lower_part = (int)uid;
                     int count = -1;
                     SQLiteCursor cursor = database.queryFinalized(String.format(Locale.US, "SELECT count FROM media_counts WHERE uid = %d LIMIT 1", uid));
                     if (cursor.next()) {
@@ -3102,7 +3103,7 @@ public class MessagesStorage {
             }
             if (encryptedMessages != null && !encryptedMessages.isEmpty()) {
                 for (HashMap.Entry<Integer, Integer> entry : encryptedMessages.entrySet()) {
-                    long dialog_id = ((long) entry.getKey()) << 32;
+                    long dialog_id = ((long)entry.getKey()) << 32;
                     int max_date = entry.getValue();
                     SQLitePreparedStatement state = database.executeFast("UPDATE messages SET read_state = 1 WHERE uid = ? AND date <= ? AND read_state = 0 AND out = 1");
                     state.requery();
@@ -3179,12 +3180,12 @@ public class MessagesStorage {
             try {
                 while (cursor.next()) {
                     long did = cursor.longValue(0);
-                    if ((int) did != 0) {
+                    if ((int)did != 0) {
                         continue;
                     }
                     ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(1));
                     if (data != null && cursor.byteBufferValue(1, data.buffer) != 0) {
-                        TLRPC.Message message = (TLRPC.Message) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                        TLRPC.Message message = (TLRPC.Message)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                         if (message == null || message.media == null) {
                             continue;
                         }
@@ -3278,7 +3279,7 @@ public class MessagesStorage {
 
                 ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(4));
                 if (data != null && cursor.byteBufferValue(4, data.buffer) != 0) {
-                    TLRPC.Message message = (TLRPC.Message) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                    TLRPC.Message message = (TLRPC.Message)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                     MessageObject.setIsUnread(message, cursor.intValue(5) != 1);
                     message.id = cursor.intValue(6);
                     message.send_state = cursor.intValue(7);
@@ -3300,8 +3301,8 @@ public class MessagesStorage {
                 }
                 buffersStorage.reuseFreeBuffer(data);
 
-                int lower_id = (int) dialog.id;
-                int high_id = (int) (dialog.id >> 32);
+                int lower_id = (int)dialog.id;
+                int high_id = (int)(dialog.id >> 32);
                 if (lower_id != 0) {
                     if (high_id == 1) {
                         if (!chatsToLoad.contains(lower_id)) {
@@ -3451,7 +3452,7 @@ public class MessagesStorage {
 
                         ByteBufferDesc data = buffersStorage.getFreeBuffer(cursor.byteArrayLength(4));
                         if (data != null && cursor.byteBufferValue(4, data.buffer) != 0) {
-                            TLRPC.Message message = (TLRPC.Message) TLClassStore.Instance().TLdeserialize(data, data.readInt32());
+                            TLRPC.Message message = (TLRPC.Message)TLClassStore.Instance().TLdeserialize(data, data.readInt32());
                             if (message != null) {
                                 MessageObject.setIsUnread(message, cursor.intValue(5) != 1);
                                 message.id = cursor.intValue(6);
@@ -3475,8 +3476,8 @@ public class MessagesStorage {
                         }
                         buffersStorage.reuseFreeBuffer(data);
 
-                        int lower_id = (int) dialog.id;
-                        int high_id = (int) (dialog.id >> 32);
+                        int lower_id = (int)dialog.id;
+                        int high_id = (int)(dialog.id >> 32);
                         if (lower_id != 0) {
                             if (high_id == 1) {
                                 if (!chatsToLoad.contains(lower_id)) {

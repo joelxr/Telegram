@@ -20,11 +20,25 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 public class FileLog {
-    private static volatile FileLog Instance = null;
     private OutputStreamWriter streamWriter = null;
     private FastDateFormat dateFormat = null;
     private DispatchQueue logQueue = null;
     private File currentFile = null;
+
+    private static volatile FileLog Instance = null;
+    public static FileLog getInstance() {
+        FileLog localInstance = Instance;
+        if (localInstance == null) {
+            synchronized (FileLog.class) {
+                localInstance = Instance;
+                if (localInstance == null) {
+                    Instance = localInstance = new FileLog();
+                }
+            }
+        }
+        return localInstance;
+    }
+
     public FileLog() {
         if (!BuildVars.DEBUG_VERSION) {
             return;
@@ -57,19 +71,6 @@ public class FileLog {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public static FileLog getInstance() {
-        FileLog localInstance = Instance;
-        if (localInstance == null) {
-            synchronized (FileLog.class) {
-                localInstance = Instance;
-                if (localInstance == null) {
-                    Instance = localInstance = new FileLog();
-                }
-            }
-        }
-        return localInstance;
     }
 
     public static void e(final String tag, final String message, final Throwable exception) {

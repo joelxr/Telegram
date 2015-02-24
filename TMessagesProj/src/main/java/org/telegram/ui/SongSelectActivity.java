@@ -8,15 +8,12 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import com.spotify.sdk.android.playback.Player;
-
-import org.telegram.R;
 import org.telegram.android.LocaleController;
+import org.telegram.R;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.Adapters.SongAdapter;
 
 public class SongSelectActivity extends BaseFragment {
 
@@ -30,8 +27,6 @@ public class SongSelectActivity extends BaseFragment {
     private SongSelectActivityDelegate delegate;
     private TextView emptyView;
     private ListView listView;
-    private SongAdapter songAdapter;
-    private Player mPlayer;
 
     public void setDelegate(SongSelectActivityDelegate delegate) {
         this.delegate = delegate;
@@ -73,26 +68,19 @@ public class SongSelectActivity extends BaseFragment {
                 }
             });
 
-            songAdapter = new SongAdapter(getParentActivity());
-
             fragmentView = inflater.inflate(R.layout.song_select_layout, container, false);
-
-            emptyView = (TextView) fragmentView.findViewById(R.id.searchEmptyView);
-            emptyView.setText(LocaleController.getString("NoSongs", R.string.NoSongs));
+            emptyView = (TextView)fragmentView.findViewById(R.id.searchEmptyView);
             emptyView.setOnTouchListener(new View.OnTouchListener() {
                 @Override
                 public boolean onTouch(View v, MotionEvent event) {
                     return true;
                 }
             });
-
-            listView = (ListView) fragmentView.findViewById(R.id.listView);
+            listView = (ListView)fragmentView.findViewById(R.id.listView);
             listView.setEmptyView(emptyView);
-            listView.setAdapter(songAdapter);
-
 
         } else {
-            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
                 parent.removeView(fragmentView);
             }
