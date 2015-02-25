@@ -27,6 +27,11 @@
     <string name="FirstName">First name (required)</string>
     <string name="LastName">Last name (optional)</string>
     <string name="CancelRegistration">Cancel registration</string>
+    <!-- connect to spotify view -->
+    <string name="ConnectSpotify">Connect to Spotify</string>
+    <string name="Login">Login</string>
+    <string name="LoggedMessage">Good... You are logged on Spotify!</string>
+    <string name="NotLoggedMessage">Hello... We use Spotify to provide songs for you, use it to share your songs and playlists with your friends.</string>
     <!--chats view-->
     <string name="Settings">Settings</string>
     <string name="Contacts">Contacts</string>

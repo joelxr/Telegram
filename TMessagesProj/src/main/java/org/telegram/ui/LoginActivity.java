@@ -87,6 +87,7 @@ public class LoginActivity extends BaseFragment {
     private int currentViewNum = 0;
     private SlideView[] views = new SlideView[4];
     private ProgressDialog progressDialog;
+    public final static int REQUEST_CODE = 1337;
 
     @Override
     public void onFragmentDestroy() {
@@ -435,6 +436,34 @@ public class LoginActivity extends BaseFragment {
         clearCurrentState();
         presentFragment(new MessagesActivity(null), true);
         NotificationCenter.getInstance().postNotificationName(NotificationCenter.mainUserInfoChanged);
+    }
+
+    @Override
+    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        super.onActivityResultFragment(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE) {
+            AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, data);
+
+            if (views[3] != null) {
+                SpotifyLoginView spotifyView = (SpotifyLoginView) views[3];
+
+                switch (response.getType()) {
+                    case TOKEN:
+                        spotifyView.setLogged(true);
+                        spotifyView.setMessage(LocaleController.getString("LoggedMessage", R.string.LoggedMessage));
+                        spotifyView.getConnectButton().setPressed(true);
+                        spotifyView.getConnectButton().setText(LocaleController.getString("Done", R.string.Done));
+                        break;
+                    case ERROR:
+                        spotifyView.setLogged(false);
+                        spotifyView.setMessage(response.getError());
+                        spotifyView.getConnectButton().setPressed(false);
+                        break;
+                    default:
+                }
+            }
+        }
     }
 
     public class PhoneView extends SlideView implements AdapterView.OnItemSelectedListener {
@@ -1250,8 +1279,8 @@ public class LoginActivity extends BaseFragment {
                                 MessagesController.getInstance().putUser(res.user, false);
                                 ContactsController.getInstance().checkAppAccount();
                                 MessagesController.getInstance().getBlockedUsers(true);
-                                needFinishActivity();
                                 ConnectionsManager.getInstance().initPushConnection();
+                                setPage(3, true, currentParams, false);
                             } else {
                                 lastError = error.text;
 
@@ -1549,7 +1578,8 @@ public class LoginActivity extends BaseFragment {
                                 MessagesController.getInstance().putUser(res.user, false);
                                 ContactsController.getInstance().checkAppAccount();
                                 MessagesController.getInstance().getBlockedUsers(true);
-                                needFinishActivity();
+                                //needFinishActivity();
+                                setPage(3, true, currentParams, false);
                                 ConnectionsManager.getInstance().initPushConnection();
                             } else {
                                 if (error.text.contains("PHONE_NUMBER_INVALID")) {
@@ -1606,25 +1636,35 @@ public class LoginActivity extends BaseFragment {
 
     public class SpotifyLoginView extends SlideView {
 
-        public final static int REQUEST_CODE = 1337;
         public final static String CLIENT_ID = "f14ccf1b7c0648cb85350639b299ef57";
         public final static String REDIRECT_URI = "amix://callback";
 
         private Button connectButton;
+        private TextView messageTextView;
         private Bundle currentParams;
         private boolean nextPressed;
+        private boolean isLogged;
 
-        public SpotifyLoginView(Context context) {
+        public SpotifyLoginView(final Context context) {
             super(context);
             setOrientation(VERTICAL);
 
             connectButton = new Button(context);
-            connectButton.setTextColor(0xff757575);
-            connectButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             connectButton.setGravity(Gravity.LEFT);
-            connectButton.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
-            connectButton.setText("Connect");
+            connectButton.setText(LocaleController.getString("Login", R.string.Login));
             addView(connectButton);
+
+            messageTextView = new TextView(context);
+            messageTextView.setText(isLogged ? LocaleController.getString("LoggedMessage", R.string.LoggedMessage) : LocaleController.getString("NotLoggedMessage", R.string.NotLoggedMessage) );
+            messageTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            messageTextView.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(10), AndroidUtilities.dp(12), 0);
+            messageTextView.setTextColor(0xff757575);
+            messageTextView.setLineSpacing(AndroidUtilities.dp(2), 1.0f);
+            messageTextView.setEllipsize(TextUtils.TruncateAt.END);
+            messageTextView.setGravity(Gravity.LEFT | Gravity.CENTER_HORIZONTAL);
+            messageTextView.setBackgroundResource(R.drawable.spinner_states);
+            addView(messageTextView);
+
             LayoutParams layoutParams = (LayoutParams) connectButton.getLayoutParams();
             layoutParams.width = LayoutParams.WRAP_CONTENT;
             layoutParams.height = LayoutParams.WRAP_CONTENT;
@@ -1652,7 +1692,7 @@ public class LoginActivity extends BaseFragment {
 
         @Override
         public String getHeaderName() {
-            return LocaleController.getString("YourName", R.string.YourName);
+            return LocaleController.getString("ConnectSpotify", R.string.ConnectSpotify);
         }
 
         @Override
@@ -1665,12 +1705,12 @@ public class LoginActivity extends BaseFragment {
 
         @Override
         public void onBackPressed() {
-            super.onBackPressed();
+
         }
 
         @Override
         public void onDestroyActivity() {
-            super.onDestroyActivity();
+
         }
 
         @Override
@@ -1695,6 +1735,18 @@ public class LoginActivity extends BaseFragment {
             if (currentParams != null) {
                 setParams(currentParams);
             }
+        }
+
+        public void setLogged(boolean isLogged) {
+            this.isLogged = isLogged;
+        }
+
+        public void setMessage(String message) {
+            this.messageTextView.setText(message);
+        }
+
+        public Button getConnectButton() {
+            return this.connectButton;
         }
     }
 }
