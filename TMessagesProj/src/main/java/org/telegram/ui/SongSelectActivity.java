@@ -1,15 +1,23 @@
 package org.telegram.ui;
 
+import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.spotify.sdk.android.Spotify;
+import com.spotify.sdk.android.playback.Config;
+import com.spotify.sdk.android.playback.Player;
+
 import org.telegram.android.LocaleController;
 import org.telegram.R;
+import org.telegram.android.SpotifyController;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
@@ -21,12 +29,11 @@ public class SongSelectActivity extends BaseFragment {
         public void didSelectSong(SongSelectActivity activity, String song);
     }
 
-    private static final String CLIENT_ID = "f14ccf1b7c0648cb85350639b299ef57";
-    private static final String REDIRECT_URI = "amix://callback";
-
+    private Player mPlayer;
     private SongSelectActivityDelegate delegate;
     private TextView emptyView;
     private ListView listView;
+    private Button playButton;
 
     public void setDelegate(SongSelectActivityDelegate delegate) {
         this.delegate = delegate;
@@ -79,6 +86,15 @@ public class SongSelectActivity extends BaseFragment {
             listView = (ListView)fragmentView.findViewById(R.id.listView);
             listView.setEmptyView(emptyView);
 
+            playButton = (Button) fragmentView.findViewById(R.id.play_button);
+            playButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    play();
+                }
+            });
+
+
         } else {
             ViewGroup parent = (ViewGroup)fragmentView.getParent();
             if (parent != null) {
@@ -88,4 +104,28 @@ public class SongSelectActivity extends BaseFragment {
 
         return fragmentView;
     }
+
+    private void play() {
+        String clientId = SpotifyController.getInstance().getClientId();
+        String accessToken =SpotifyController.getInstance().getAccessToken();
+
+        if (!"".equals(accessToken)) {
+            Config playerConfig = new Config(getParentActivity(), accessToken, clientId);
+
+            mPlayer = Spotify.getPlayer(playerConfig, this, new Player.InitializationObserver() {
+                @Override
+                public void onInitialized(Player player) {
+                    mPlayer.addConnectionStateCallback((LaunchActivity) getParentActivity());
+                    mPlayer.addPlayerNotificationCallback((LaunchActivity) getParentActivity());
+                }
+
+                @Override
+                public void onError(Throwable throwable) { }
+            });
+
+            mPlayer.play("spotify:track:2TpxZ7JUBn3uw46aR7qd6V");
+        }
+    }
+
+
 }

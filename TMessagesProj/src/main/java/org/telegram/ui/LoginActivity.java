@@ -55,6 +55,7 @@ import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
 import org.telegram.android.MessagesStorage;
 import org.telegram.android.NotificationCenter;
+import org.telegram.android.SpotifyController;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ConnectionsManager;
@@ -450,15 +451,16 @@ public class LoginActivity extends BaseFragment {
 
                 switch (response.getType()) {
                     case TOKEN:
-                        spotifyView.setLogged(true);
                         spotifyView.setMessage(LocaleController.getString("LoggedMessage", R.string.LoggedMessage));
                         spotifyView.getConnectButton().setPressed(true);
                         spotifyView.getConnectButton().setText(LocaleController.getString("Done", R.string.Done));
+                        SpotifyController.getInstance().setAccessToken(response.getAccessToken());
+                        SpotifyController.getInstance().setLogged(true);
                         break;
                     case ERROR:
-                        spotifyView.setLogged(false);
                         spotifyView.setMessage(response.getError());
                         spotifyView.getConnectButton().setPressed(false);
+                        SpotifyController.getInstance().setLogged(false);
                         break;
                     default:
                 }
@@ -1636,14 +1638,10 @@ public class LoginActivity extends BaseFragment {
 
     public class SpotifyLoginView extends SlideView {
 
-        public final static String CLIENT_ID = "f14ccf1b7c0648cb85350639b299ef57";
-        public final static String REDIRECT_URI = "amix://callback";
-
         private Button connectButton;
         private TextView messageTextView;
         private Bundle currentParams;
         private boolean nextPressed;
-        private boolean isLogged;
 
         public SpotifyLoginView(final Context context) {
             super(context);
@@ -1654,6 +1652,7 @@ public class LoginActivity extends BaseFragment {
             connectButton.setText(LocaleController.getString("Login", R.string.Login));
             addView(connectButton);
 
+            boolean isLogged = SpotifyController.getInstance().isLogged();
             messageTextView = new TextView(context);
             messageTextView.setText(isLogged ? LocaleController.getString("LoggedMessage", R.string.LoggedMessage) : LocaleController.getString("NotLoggedMessage", R.string.NotLoggedMessage) );
             messageTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
@@ -1675,8 +1674,7 @@ public class LoginActivity extends BaseFragment {
             connectButton.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    AuthenticationRequest request = new AuthenticationRequest.Builder(CLIENT_ID, AuthenticationResponse.Type.TOKEN, REDIRECT_URI).setScopes(new String[]{"user-read-private", "playlist-read", "playlist-read-private", "streaming"}).build();
-                    AuthenticationClient.openLoginActivity(getParentActivity(), REQUEST_CODE, request);
+                    SpotifyController.getInstance().doAuthetication(getParentActivity(), REQUEST_CODE);
                 }
             });
         }
@@ -1700,6 +1698,7 @@ public class LoginActivity extends BaseFragment {
             if (params == null) {
                 return;
             }
+
             currentParams = params;
         }
 
@@ -1724,6 +1723,8 @@ public class LoginActivity extends BaseFragment {
 
         @Override
         public void saveStateParams(Bundle bundle) {
+            bundle.putString("request_code", Integer.toString(REQUEST_CODE));
+
             if (currentParams != null) {
                 bundle.putBundle("spotifyloginview_params", currentParams);
             }
@@ -1735,10 +1736,6 @@ public class LoginActivity extends BaseFragment {
             if (currentParams != null) {
                 setParams(currentParams);
             }
-        }
-
-        public void setLogged(boolean isLogged) {
-            this.isLogged = isLogged;
         }
 
         public void setMessage(String message) {

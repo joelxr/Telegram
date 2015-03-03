@@ -24,4 +24,11 @@
         android:visibility="gone"
         android:layout_gravity="top"/>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/play_button"
+        android:text="Play"/>
+
+
 </FrameLayout>
