@@ -1,7 +1,5 @@
 package org.telegram.ui;
 
-import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -17,7 +15,7 @@ import com.spotify.sdk.android.playback.Player;
 
 import org.telegram.android.LocaleController;
 import org.telegram.R;
-import org.telegram.android.SpotifyController;
+import org.telegram.android.SpotifyHelper;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
@@ -106,8 +104,8 @@ public class SongSelectActivity extends BaseFragment {
     }
 
     private void play() {
-        String clientId = SpotifyController.getInstance().getClientId();
-        String accessToken =SpotifyController.getInstance().getAccessToken();
+        String clientId = SpotifyHelper.getInstance().getClientId();
+        String accessToken = SpotifyHelper.getInstance().getAccessToken();
 
         if (!"".equals(accessToken)) {
             Config playerConfig = new Config(getParentActivity(), accessToken, clientId);

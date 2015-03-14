@@ -44,7 +44,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.spotify.sdk.android.authentication.AuthenticationClient;
-import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
 import org.telegram.PhoneFormat.PhoneFormat;
@@ -55,7 +54,7 @@ import org.telegram.android.LocaleController;
 import org.telegram.android.MessagesController;
 import org.telegram.android.MessagesStorage;
 import org.telegram.android.NotificationCenter;
-import org.telegram.android.SpotifyController;
+import org.telegram.android.SpotifyHelper;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.ConnectionsManager;
@@ -454,13 +453,13 @@ public class LoginActivity extends BaseFragment {
                         spotifyView.setMessage(LocaleController.getString("LoggedMessage", R.string.LoggedMessage));
                         spotifyView.getConnectButton().setPressed(true);
                         spotifyView.getConnectButton().setText(LocaleController.getString("Done", R.string.Done));
-                        SpotifyController.getInstance().setAccessToken(response.getAccessToken());
-                        SpotifyController.getInstance().setLogged(true);
+                        SpotifyHelper.getInstance().setAccessToken(response.getAccessToken());
+                        SpotifyHelper.getInstance().setLogged(true);
                         break;
                     case ERROR:
                         spotifyView.setMessage(response.getError());
                         spotifyView.getConnectButton().setPressed(false);
-                        SpotifyController.getInstance().setLogged(false);
+                        SpotifyHelper.getInstance().setLogged(false);
                         break;
                     default:
                 }
@@ -1652,7 +1651,7 @@ public class LoginActivity extends BaseFragment {
             connectButton.setText(LocaleController.getString("Login", R.string.Login));
             addView(connectButton);
 
-            boolean isLogged = SpotifyController.getInstance().isLogged();
+            boolean isLogged = SpotifyHelper.getInstance().isLogged();
             messageTextView = new TextView(context);
             messageTextView.setText(isLogged ? LocaleController.getString("LoggedMessage", R.string.LoggedMessage) : LocaleController.getString("NotLoggedMessage", R.string.NotLoggedMessage) );
             messageTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
@@ -1674,7 +1673,7 @@ public class LoginActivity extends BaseFragment {
             connectButton.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    SpotifyController.getInstance().doAuthetication(getParentActivity(), REQUEST_CODE);
+                    SpotifyHelper.getInstance().doAuthetication(getParentActivity(), REQUEST_CODE);
                 }
             });
         }
@@ -1724,6 +1723,8 @@ public class LoginActivity extends BaseFragment {
         @Override
         public void saveStateParams(Bundle bundle) {
             bundle.putString("request_code", Integer.toString(REQUEST_CODE));
+            bundle.putString("acess_token", SpotifyHelper.getInstance().getAccessToken());
+            bundle.putString("client_id", SpotifyHelper.getInstance().getClientId());
 
             if (currentParams != null) {
                 bundle.putBundle("spotifyloginview_params", currentParams);

@@ -6,9 +6,9 @@ import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
-public class SpotifyController {
+public class SpotifyHelper {
 
-    private static SpotifyController instance;
+    private static SpotifyHelper instance;
 
     private final String clientId = "f14ccf1b7c0648cb85350639b299ef57";
     private final String redirectUri = "amix://callback";
@@ -16,11 +16,11 @@ public class SpotifyController {
     private String accessToken;
     private boolean logged;
 
-    private SpotifyController () {}
+    private SpotifyHelper() {}
 
-    public static SpotifyController getInstance() {
+    public static SpotifyHelper getInstance() {
         if (instance == null) {
-            instance = new SpotifyController();
+            instance = new SpotifyHelper();
         }
         return instance;
     }
