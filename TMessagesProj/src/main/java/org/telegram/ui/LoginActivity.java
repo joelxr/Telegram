@@ -81,6 +81,8 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import kaaes.spotify.webapi.android.SpotifyApi;
+
 public class LoginActivity extends BaseFragment {
 
     private final static int done_button = 1;
@@ -455,6 +457,8 @@ public class LoginActivity extends BaseFragment {
                         spotifyView.getConnectButton().setText(LocaleController.getString("Done", R.string.Done));
                         SpotifyHelper.getInstance().setAccessToken(response.getAccessToken());
                         SpotifyHelper.getInstance().setLogged(true);
+                        SpotifyHelper.getInstance().setApi(new SpotifyApi());
+                        SpotifyHelper.getInstance().getApi().setAccessToken(response.getAccessToken());
                         break;
                     case ERROR:
                         spotifyView.setMessage(response.getError());

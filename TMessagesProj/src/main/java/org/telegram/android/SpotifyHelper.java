@@ -6,6 +6,9 @@ import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
 
+import kaaes.spotify.webapi.android.SpotifyApi;
+import kaaes.spotify.webapi.android.SpotifyService;
+
 public class SpotifyHelper {
 
     private static SpotifyHelper instance;
@@ -15,6 +18,7 @@ public class SpotifyHelper {
 
     private String accessToken;
     private boolean logged;
+    private SpotifyApi api;
 
     private SpotifyHelper() {}
 
@@ -53,4 +57,8 @@ public class SpotifyHelper {
     public void setLogged(boolean logged) {
         this.logged = logged;
     }
+
+    public SpotifyApi getApi() { return api; }
+
+    public void setApi(SpotifyApi api) { this.api = api; }
 }
