@@ -46,6 +46,7 @@ public class SongSelectActivity extends BaseFragment {
     public final Handler handler = new Handler() {
         public void handleMessage(Message msg) {
             List result = (List) msg.obj;
+            adapter.clear();
             adapter.addAll(result);
         }
     };
@@ -87,7 +88,8 @@ public class SongSelectActivity extends BaseFragment {
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    play();
+                    Track t = (Track) searchResult.get(position);
+                    play(t.uri);
                 }
             });
 
@@ -106,7 +108,7 @@ public class SongSelectActivity extends BaseFragment {
         return fragmentView;
     }
 
-    private void play() {
+    private void play(String uri) {
         String clientId = SpotifyHelper.getInstance().getClientId();
         String accessToken = SpotifyHelper.getInstance().getAccessToken();
 
@@ -124,7 +126,7 @@ public class SongSelectActivity extends BaseFragment {
                 public void onError(Throwable throwable) { }
             });
 
-            mPlayer.play("spotify:track:2TpxZ7JUBn3uw46aR7qd6V");
+            mPlayer.play(uri);
         }
     }
 
